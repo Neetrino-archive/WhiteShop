@@ -1,0 +1,58 @@
+{
+  "methods": [
+    {
+      "id": "standard",
+      "enabled": true,
+      "name": {
+        "en": "Standard Delivery",
+        "ru": "Стандартная доставка",
+        "am": "Ստանդարտ առաքում"
+      },
+      "price": 2000,
+      "freeAbove": 50000,
+      "estimatedDays": 3,
+      "locations": []
+    },
+    {
+      "id": "express",
+      "enabled": true,
+      "name": {
+        "en": "Express Delivery",
+        "ru": "Экспресс доставка",
+        "am": "Էքսպրես առաքում"
+      },
+      "price": 5000,
+      "freeAbove": 100000,
+      "estimatedDays": 1,
+      "locations": []
+    },
+    {
+      "id": "pickup",
+      "enabled": true,
+      "name": {
+        "en": "Store Pickup",
+        "ru": "Самовывоз из магазина",
+        "am": "Խանութից վերցնել"
+      },
+      "price": 0,
+      "freeAbove": null,
+      "estimatedDays": 0,
+      "locations": [
+        {
+          "name": {
+            "en": "Main Store",
+            "ru": "Главный магазин",
+            "am": "Գլխավոր խանութ"
+          },
+          "address": "Yerevan, Armenia",
+          "workingHours": {
+            "en": "Mon-Sat: 10:00-20:00",
+            "ru": "Пн-Сб: 10:00-20:00",
+            "am": "Երկ-Շաբ: 10:00-20:00"
+          }
+        }
+      ]
+    }
+  ]
+}
+

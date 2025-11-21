@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@shop/ui';
 import { apiClient } from '../lib/api-client';
 import { getStoredLanguage } from '../lib/language';
-import { getStoredCurrency, CURRENCIES } from '../lib/currency';
+import { getStoredCurrency, formatPrice as formatCurrencyPrice, type CurrencyCode } from '../lib/currency';
 
 interface PriceFilterProps {
   currentMinPrice?: string;
@@ -25,9 +25,26 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category, search
   const [minPrice, setMinPrice] = useState(currentMinPrice ? parseFloat(currentMinPrice) : 0);
   const [maxPrice, setMaxPrice] = useState(currentMaxPrice ? parseFloat(currentMaxPrice) : 100000);
   const [isDragging, setIsDragging] = useState<'min' | 'max' | null>(null);
+  const [currency, setCurrency] = useState<CurrencyCode>('USD'); // Default для SSR
   const sliderRef = useRef<HTMLDivElement>(null);
-  const currency = getStoredCurrency();
-  const currencySymbol = CURRENCIES[currency]?.symbol || '$';
+
+  // Загружаем валюту только на клиенте, чтобы избежать проблем с гидратацией
+  useEffect(() => {
+    const updateCurrency = () => {
+      setCurrency(getStoredCurrency());
+    };
+    
+    // Загружаем валюту при монтировании
+    updateCurrency();
+    
+    // Слушаем изменения валюты
+    if (typeof window !== 'undefined') {
+      window.addEventListener('currency-updated', updateCurrency);
+      return () => {
+        window.removeEventListener('currency-updated', updateCurrency);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     fetchPriceRange();
@@ -155,21 +172,12 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category, search
     }
   }, [isDragging, minPrice, maxPrice, priceRange, search, category, router]);
 
+  // Используем функцию форматирования из currency.ts для консистентности
   const formatPrice = (price: number) => {
     if (typeof price !== 'number' || isNaN(price) || !isFinite(price)) {
-      return '0';
+      return formatCurrencyPrice(0, currency);
     }
-    try {
-      const safeCurrency = currency || 'USD';
-      return new Intl.NumberFormat('hy-AM', {
-        style: 'currency',
-        currency: safeCurrency,
-        minimumFractionDigits: 0,
-      }).format(price);
-    } catch (error) {
-      console.error('Error formatting price:', error);
-      return price.toString();
-    }
+    return formatCurrencyPrice(price, currency);
   };
 
   const safeMinPrice: number = typeof minPrice === 'number' && !isNaN(minPrice) && isFinite(minPrice) ? minPrice : 0;

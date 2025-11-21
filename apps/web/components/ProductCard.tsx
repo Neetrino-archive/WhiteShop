@@ -82,6 +82,7 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [isInCompare, setIsInCompare] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Проверка состояния wishlist и compare
   useEffect(() => {
@@ -265,7 +266,7 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
             href={`/products/${product.slug}`}
             className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden"
           >
-            {product.image ? (
+            {product.image && !imageError ? (
               <Image
                 src={product.image}
                 alt={product.title}
@@ -273,6 +274,7 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
                 className="object-cover"
                 sizes="80px"
                 unoptimized
+                onError={() => setImageError(true)}
               />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -365,7 +367,7 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
       {/* Product Image */}
       <div className="aspect-square bg-gray-100 relative overflow-hidden">
         <Link href={`/products/${product.slug}`} className="block w-full h-full">
-          {product.image ? (
+          {product.image && !imageError ? (
             <Image
               src={product.image}
               alt={product.title}
@@ -373,6 +375,7 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
               className="object-cover"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
               unoptimized
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center">

@@ -1,0 +1,25 @@
+{
+  "name": "shop-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Run both backend and frontend together",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" --names \"API,WEB\" --prefix-colors \"blue,green\"",
+    "dev:api": "cd ../apps/api && npm run dev",
+    "dev:web": "cd ../apps/web && npm run dev",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "cd ../apps/api && npm run build",
+    "build:web": "cd ../apps/web && npm run build",
+    "start": "concurrently \"npm run start:api\" \"npm run start:web\" --names \"API,WEB\" --prefix-colors \"blue,green\"",
+    "start:api": "cd ../apps/api && npm start",
+    "start:web": "cd ../apps/web && npm start",
+    "install:all": "npm install && cd ../apps/api && npm install && cd ../apps/web && npm install",
+    "db:seed": "cd ../apps/api && npm run seed",
+    "lint": "cd .. && npm run lint",
+    "format": "cd .. && npm run format"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+

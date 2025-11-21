@@ -67,7 +67,12 @@ export function GoogleTranslate() {
   // Initialize Google Translate
   useEffect(() => {
     const initTranslate = () => {
-      if (typeof window !== 'undefined' && window.google?.translate && hiddenElementRef.current) {
+      if (
+        typeof window !== 'undefined' && 
+        window.google?.translate && 
+        window.google.translate.TranslateElement?.InlineLayout &&
+        hiddenElementRef.current
+      ) {
         try {
           new window.google.translate.TranslateElement(
             {
@@ -91,11 +96,19 @@ export function GoogleTranslate() {
       } else {
         // Wait for script to load
         const checkInterval = setInterval(() => {
-          if (window.google?.translate) {
+          if (
+            window.google?.translate && 
+            window.google.translate.TranslateElement?.InlineLayout
+          ) {
             initTranslate();
             clearInterval(checkInterval);
           }
         }, 100);
+        
+        // Очистка интервала после 10 секунд, чтобы избежать бесконечного ожидания
+        setTimeout(() => {
+          clearInterval(checkInterval);
+        }, 10000);
 
         return () => clearInterval(checkInterval);
       }

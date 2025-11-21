@@ -2,7 +2,7 @@
 
 import { Card } from '@shop/ui';
 import { useEffect, useState } from 'react';
-import shippingData from '../../../../config/shipping.json';
+import shippingData from '../../config/shipping.json';
 import { getStoredLanguage } from '../../lib/language';
 
 export default function DeliveryPage() {

@@ -123,6 +123,26 @@ class ApiClient {
     return status !== 401;
   }
 
+  /**
+   * Handle 401 Unauthorized errors - clear auth and redirect
+   */
+  private handleUnauthorized() {
+    if (typeof window === 'undefined') return;
+    
+    console.warn('⚠️ [API CLIENT] Unauthorized (401) - clearing auth data');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    
+    // Trigger auth update event to notify AuthContext
+    window.dispatchEvent(new Event('auth-updated'));
+    
+    // Redirect to login if not already there
+    if (!window.location.pathname.includes('/login')) {
+      const currentPath = window.location.pathname + window.location.search;
+      window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
+    }
+  }
+
   async get<T>(endpoint: string, options?: RequestOptions, retryCount = 0): Promise<T> {
     const url = this.buildUrl(endpoint, options?.params);
     const maxRetries = 3;
@@ -147,6 +167,11 @@ class ApiClient {
       let errorText = '';
       let errorData: any = null;
       const isUnauthorized = response.status === 401;
+      
+      // Handle 401 Unauthorized - clear token and redirect
+      if (isUnauthorized) {
+        this.handleUnauthorized();
+      }
       
       try {
         const text = await response.text();
@@ -207,6 +232,11 @@ class ApiClient {
         let errorText = '';
         let errorData: any = null;
         const isUnauthorized = response.status === 401;
+        
+        // Handle 401 Unauthorized - clear token and redirect
+        if (isUnauthorized) {
+          this.handleUnauthorized();
+        }
         
         try {
           const text = await response.text();
