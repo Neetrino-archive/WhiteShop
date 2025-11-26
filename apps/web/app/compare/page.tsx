@@ -348,11 +348,11 @@ export default function ComparePage() {
                   {products.map((product) => (
                     <td key={product.id} className="px-4 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <p className="text-lg font-bold text-gray-900">
+                        <p className="text-lg font-bold text-gray-900 select-none">
                           {formatPrice(product.price, currency)}
                         </p>
                         {product.compareAtPrice && product.compareAtPrice > product.price && (
-                          <p className="text-sm text-gray-400 line-through">
+                          <p className="text-sm text-gray-400 line-through select-none">
                             {formatPrice(product.compareAtPrice, currency)}
                           </p>
                         )}

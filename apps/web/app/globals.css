@@ -6,6 +6,34 @@
   body {
     @apply bg-white text-gray-900;
   }
+  
+  /* Prevent text selection and caret on all text elements */
+  p, span, div, h1, h2, h3, h4, h5, h6, 
+  li, td, th, label, strong, em, b, i, 
+  small, blockquote, pre, code, 
+  article, section, aside, header, footer, nav, main {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    caret-color: transparent !important;
+  }
+  
+  /* Allow selection in input and textarea fields */
+  input, textarea {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+  
+  /* Links should be selectable but no caret */
+  a {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+  }
 }
 
 @layer utilities {

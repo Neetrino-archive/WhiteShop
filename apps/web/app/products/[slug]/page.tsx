@@ -9,7 +9,7 @@ import { getStoredLanguage } from '../../../lib/language';
 import { useAuth } from '../../../lib/auth/AuthContext';
 import { RelatedProducts } from '../../../components/RelatedProducts';
 import { ProductReviews } from '../../../components/ProductReviews';
-import { Heart, GitCompare, Minus, Plus } from 'lucide-react';
+import { Heart, Minus, Plus } from 'lucide-react';
 
 interface ProductPageProps {
   params: Promise<{ slug?: string }>;
@@ -70,6 +70,16 @@ const RESERVED_ROUTES = ['admin', 'login', 'register', 'cart', 'checkout', 'prof
 
 const WISHLIST_KEY = 'shop_wishlist';
 const COMPARE_KEY = 'shop_compare';
+
+// Compare Icon Component (same as in Header)
+const CompareIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Left arrow pointing right */}
+    <path d="M3 10L7 6M3 10L7 14M3 10H17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Right arrow pointing left */}
+    <path d="M17 10L13 6M17 10L13 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 export default function ProductPage({ params }: ProductPageProps) {
   const router = useRouter();
@@ -983,7 +993,7 @@ const handleCompareToggle = (e: React.MouseEvent) => {
                   }`}
                   aria-label={isInCompare ? 'Remove from compare' : 'Add to compare'}
                 >
-                  <GitCompare className="w-5 h-5" />
+                  <CompareIcon />
                 </button>
               </div>
             </div>

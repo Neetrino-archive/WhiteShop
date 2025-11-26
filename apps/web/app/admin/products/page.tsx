@@ -39,6 +39,8 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState<ProductsResponse['meta'] | null>(null);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
 
   useEffect(() => {
     if (!isLoading) {
@@ -67,6 +69,14 @@ export default function ProductsPage() {
         params.search = search.trim();
       }
 
+      if (minPrice.trim()) {
+        params.minPrice = minPrice.trim();
+      }
+
+      if (maxPrice.trim()) {
+        params.maxPrice = maxPrice.trim();
+      }
+
       const response = await apiClient.get<ProductsResponse>('/api/v1/admin/products', {
         params,
       });
@@ -85,6 +95,18 @@ export default function ProductsPage() {
     e.preventDefault();
     setPage(1);
     fetchProducts();
+  };
+
+  const handlePriceFilter = () => {
+    setPage(1);
+    fetchProducts();
+  };
+
+  const handleClearPriceFilter = () => {
+    setMinPrice('');
+    setMaxPrice('');
+    setPage(1);
+    // fetchProducts will be called automatically by useEffect
   };
 
   const handleDeleteProduct = async (productId: string, productTitle: string) => {
@@ -198,34 +220,94 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Search */}
-        <Card className="p-4 mb-6">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Button type="submit" variant="primary">
-              Search
-            </Button>
-            {search && (
+        {/* Search and Filters */}
+        <div className="space-y-4 mb-6">
+          {/* Search */}
+          <Card className="p-4">
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search products..."
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Button type="submit" variant="primary">
+                Search
+              </Button>
+              {search && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setSearch('');
+                    setPage(1);
+                    fetchProducts();
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </form>
+          </Card>
+
+          {/* Filter by Price */}
+          <Card className="p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Filter by Price</h3>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Min Price (AMD)
+                </label>
+                <input
+                  type="number"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="100"
+                  min="0"
+                  step="1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Max Price (AMD)
+                </label>
+                <input
+                  type="number"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="1000"
+                  min="0"
+                  step="1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
               <Button
                 type="button"
-                variant="ghost"
-                onClick={() => {
-                  setSearch('');
-                  setPage(1);
-                  fetchProducts();
-                }}
+                variant="primary"
+                onClick={handlePriceFilter}
+                disabled={!minPrice && !maxPrice}
               >
-                Clear
+                Apply Filter
               </Button>
+              {(minPrice || maxPrice) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleClearPriceFilter}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            {(minPrice || maxPrice) && (
+              <div className="mt-2 text-xs text-gray-600">
+                Filtering by price range: {minPrice || '0'} - {maxPrice || '∞'} AMD
+              </div>
             )}
-          </form>
-        </Card>
+          </Card>
+        </div>
 
         {/* Products Table */}
         <Card className="overflow-hidden">

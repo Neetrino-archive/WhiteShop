@@ -406,7 +406,7 @@ const adminController = {
    */
   async getProducts(req, res, next) {
     try {
-      const { page = 1, limit = 20, search = '' } = req.query;
+      const { page = 1, limit = 20, search = '', minPrice, maxPrice } = req.query;
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
       const query = { deletedAt: null };
@@ -418,6 +418,24 @@ const adminController = {
           { 'translations.slug': searchRegex },
           { 'variants.sku': searchRegex },
         ];
+      }
+
+      // Price filtering - filter products by variant prices
+      if (minPrice || maxPrice) {
+        const priceFilter = {};
+        if (minPrice) {
+          priceFilter.$gte = parseFloat(minPrice);
+        }
+        if (maxPrice) {
+          priceFilter.$lte = parseFloat(maxPrice);
+        }
+        // Filter products that have at least one published variant with price in range
+        query.variants = {
+          $elemMatch: {
+            published: true,
+            price: priceFilter,
+          },
+        };
       }
 
       const [products, total] = await Promise.all([
@@ -2195,6 +2213,169 @@ const adminController = {
       res.json(settingsObj);
     } catch (error) {
       console.error('❌ [ADMIN] Error updating settings:', error);
+      next(error);
+    }
+  },
+
+  /**
+   * Get price filter settings (admin only)
+   * GET /api/v1/admin/settings/price-filter
+   */
+  async getPriceFilterSettings(req, res, next) {
+    try {
+      console.log('⚙️ [ADMIN] Fetching price filter settings...');
+
+      const minPriceSetting = await Settings.findOne({ key: 'priceFilterDefaultMin' }).lean();
+      const maxPriceSetting = await Settings.findOne({ key: 'priceFilterDefaultMax' }).lean();
+      const stepSizeSetting = await Settings.findOne({ key: 'priceFilterStepSize' }).lean();
+
+      const response = {
+        minPrice: minPriceSetting?.value || null,
+        maxPrice: maxPriceSetting?.value || null,
+        stepSize: stepSizeSetting?.value || null,
+      };
+
+      console.log('✅ [ADMIN] Price filter settings fetched:', response);
+      res.json(response);
+    } catch (error) {
+      console.error('❌ [ADMIN] Error fetching price filter settings:', error);
+      next(error);
+    }
+  },
+
+  /**
+   * Update price filter settings (admin only)
+   * PUT /api/v1/admin/settings/price-filter
+   */
+  async updatePriceFilterSettings(req, res, next) {
+    try {
+      console.log('⚙️ [ADMIN] Updating price filter settings...');
+      console.log('⚙️ [ADMIN] Update data:', JSON.stringify(req.body, null, 2));
+
+      const { minPrice, maxPrice, stepSize } = req.body;
+
+      // Validate minPrice
+      if (minPrice !== null && minPrice !== undefined) {
+        const minValue = parseFloat(minPrice);
+        if (isNaN(minValue) || minValue < 0) {
+          return res.status(400).json({
+            type: 'https://api.shop.am/problems/validation-error',
+            title: 'Validation Error',
+            status: 400,
+            detail: 'Min Price must be a valid positive number',
+            instance: req.path,
+          });
+        }
+
+        // Update or create minPrice setting
+        await Settings.findOneAndUpdate(
+          { key: 'priceFilterDefaultMin' },
+          { 
+            key: 'priceFilterDefaultMin',
+            value: minValue,
+            description: 'Default minimum price for products page price filter (AMD)',
+          },
+          { upsert: true, new: true }
+        );
+
+        console.log('✅ [ADMIN] Price filter min price updated:', minValue);
+      } else {
+        // Remove setting if null/undefined
+        await Settings.deleteOne({ key: 'priceFilterDefaultMin' });
+        console.log('✅ [ADMIN] Price filter min price removed');
+      }
+
+      // Validate maxPrice
+      if (maxPrice !== null && maxPrice !== undefined) {
+        const maxValue = parseFloat(maxPrice);
+        if (isNaN(maxValue) || maxValue < 0) {
+          return res.status(400).json({
+            type: 'https://api.shop.am/problems/validation-error',
+            title: 'Validation Error',
+            status: 400,
+            detail: 'Max Price must be a valid positive number',
+            instance: req.path,
+          });
+        }
+
+        // Update or create maxPrice setting
+        await Settings.findOneAndUpdate(
+          { key: 'priceFilterDefaultMax' },
+          { 
+            key: 'priceFilterDefaultMax',
+            value: maxValue,
+            description: 'Default maximum price for products page price filter (AMD)',
+          },
+          { upsert: true, new: true }
+        );
+
+        console.log('✅ [ADMIN] Price filter max price updated:', maxValue);
+      } else {
+        // Remove setting if null/undefined
+        await Settings.deleteOne({ key: 'priceFilterDefaultMax' });
+        console.log('✅ [ADMIN] Price filter max price removed');
+      }
+
+      // Validate stepSize
+      if (stepSize !== null && stepSize !== undefined) {
+        const stepValue = parseFloat(stepSize);
+        if (isNaN(stepValue) || stepValue <= 0) {
+          return res.status(400).json({
+            type: 'https://api.shop.am/problems/validation-error',
+            title: 'Validation Error',
+            status: 400,
+            detail: 'Step Size must be a valid positive number',
+            instance: req.path,
+          });
+        }
+
+        // Update or create stepSize setting
+        await Settings.findOneAndUpdate(
+          { key: 'priceFilterStepSize' },
+          { 
+            key: 'priceFilterStepSize',
+            value: stepValue,
+            description: 'Step size for products page price filter slider (AMD)',
+          },
+          { upsert: true, new: true }
+        );
+
+        console.log('✅ [ADMIN] Price filter step size updated:', stepValue);
+      } else {
+        // Remove setting if null/undefined
+        await Settings.deleteOne({ key: 'priceFilterStepSize' });
+        console.log('✅ [ADMIN] Price filter step size removed');
+      }
+
+      // Validate that min < max if both are set
+      if (minPrice !== null && minPrice !== undefined && maxPrice !== null && maxPrice !== undefined) {
+        const minValue = parseFloat(minPrice);
+        const maxValue = parseFloat(maxPrice);
+        if (minValue >= maxValue) {
+          return res.status(400).json({
+            type: 'https://api.shop.am/problems/validation-error',
+            title: 'Validation Error',
+            status: 400,
+            detail: 'Min Price must be less than Max Price',
+            instance: req.path,
+          });
+        }
+      }
+
+      // Return updated settings
+      const minPriceSetting = await Settings.findOne({ key: 'priceFilterDefaultMin' }).lean();
+      const maxPriceSetting = await Settings.findOne({ key: 'priceFilterDefaultMax' }).lean();
+      const stepSizeSetting = await Settings.findOne({ key: 'priceFilterStepSize' }).lean();
+
+      const response = {
+        minPrice: minPriceSetting?.value || null,
+        maxPrice: maxPriceSetting?.value || null,
+        stepSize: stepSizeSetting?.value || null,
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('❌ [ADMIN] Error updating price filter settings:', error);
       next(error);
     }
   },

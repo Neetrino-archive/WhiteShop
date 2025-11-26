@@ -43,5 +43,9 @@ router.get('/dashboard/user-activity', adminController.getUserActivity);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 
+// Price filter settings
+router.get('/settings/price-filter', adminController.getPriceFilterSettings);
+router.put('/settings/price-filter', adminController.updatePriceFilterSettings);
+
 module.exports = router;
 

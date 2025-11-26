@@ -221,6 +221,16 @@ export default function QuickSettingsPage() {
       ),
     },
     {
+      id: 'price-filter-settings',
+      label: 'Filter by Price',
+      path: '/admin/price-filter-settings',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+      ),
+    },
+    {
       id: 'settings',
       label: 'Settings',
       path: '/admin/settings',
@@ -496,14 +506,14 @@ export default function QuickSettingsPage() {
                               <>
                                 {currentDiscount > 0 && originalPrice > 0 ? (
                                   <>
-                                    <span className="text-xs font-semibold text-blue-600">
+                                    <span className="text-xs font-semibold text-blue-600 select-none">
                                       {new Intl.NumberFormat('hy-AM', {
                                         style: 'currency',
                                         currency: 'AMD',
                                         minimumFractionDigits: 0,
                                       }).format(discountedPrice)}
                                     </span>
-                                    <span className="text-xs text-gray-400 line-through">
+                                    <span className="text-xs text-gray-400 line-through select-none">
                                       {new Intl.NumberFormat('hy-AM', {
                                         style: 'currency',
                                         currency: 'AMD',
@@ -515,7 +525,7 @@ export default function QuickSettingsPage() {
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 select-none">
                                     {originalPrice > 0 ? new Intl.NumberFormat('hy-AM', {
                                       style: 'currency',
                                       currency: 'AMD',

@@ -540,9 +540,27 @@ const productsController = {
       minPrice = minPrice === Infinity ? 0 : Math.floor(minPrice / 1000) * 1000;
       maxPrice = maxPrice === 0 ? 100000 : Math.ceil(maxPrice / 1000) * 1000;
 
+      // If no category is specified, check for default price filter settings
+      if (!category) {
+        const defaultMinSetting = await Settings.findOne({ key: 'priceFilterDefaultMin' }).lean();
+        const defaultMaxSetting = await Settings.findOne({ key: 'priceFilterDefaultMax' }).lean();
+
+        if (defaultMinSetting?.value !== null && defaultMinSetting?.value !== undefined) {
+          minPrice = defaultMinSetting.value;
+        }
+        if (defaultMaxSetting?.value !== null && defaultMaxSetting?.value !== undefined) {
+          maxPrice = defaultMaxSetting.value;
+        }
+      }
+
+      // Get step size setting
+      const stepSizeSetting = await Settings.findOne({ key: 'priceFilterStepSize' }).lean();
+      const stepSize = stepSizeSetting?.value || null;
+
       res.json({
         min: minPrice,
         max: maxPrice,
+        stepSize: stepSize,
       });
     } catch (error) {
       next(error);

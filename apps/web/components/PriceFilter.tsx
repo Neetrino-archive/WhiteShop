@@ -17,16 +17,23 @@ interface PriceFilterProps {
 interface PriceRange {
   min: number;
   max: number;
+  stepSize?: number | null;
 }
 
 export function PriceFilter({ currentMinPrice, currentMaxPrice, category, search }: PriceFilterProps) {
   const router = useRouter();
-  const [priceRange, setPriceRange] = useState<PriceRange>({ min: 0, max: 100000 });
+  const [priceRange, setPriceRange] = useState<PriceRange>({ min: 0, max: 100000, stepSize: null });
   const [minPrice, setMinPrice] = useState(currentMinPrice ? parseFloat(currentMinPrice) : 0);
   const [maxPrice, setMaxPrice] = useState(currentMaxPrice ? parseFloat(currentMaxPrice) : 100000);
   const [isDragging, setIsDragging] = useState<'min' | 'max' | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD'); // Default для SSR
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  // Helper function to round value to step size
+  const roundToStep = (value: number, step: number | null | undefined): number => {
+    if (!step || step <= 0) return Math.round(value);
+    return Math.round(value / step) * step;
+  };
 
   // Загружаем валюту только на клиенте, чтобы избежать проблем с гидратацией
   useEffect(() => {
@@ -92,15 +99,17 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category, search
     const rect = sliderRef.current.getBoundingClientRect();
     const percentage = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     const value = priceRange.min + (percentage / 100) * (priceRange.max - priceRange.min);
+    const step = priceRange.stepSize || 1;
+    const roundedValue = roundToStep(value, step);
 
     if (isDragging === 'min') {
       const currentMax = typeof maxPrice === 'number' && !isNaN(maxPrice) ? maxPrice : priceRange.max;
-      const newMin = Math.max(priceRange.min, Math.min(value, currentMax - 1));
-      setMinPrice(Math.round(newMin));
+      const newMin = Math.max(priceRange.min, Math.min(roundedValue, currentMax - step));
+      setMinPrice(newMin);
     } else if (isDragging === 'max') {
       const currentMin = typeof minPrice === 'number' && !isNaN(minPrice) ? minPrice : priceRange.min;
-      const newMax = Math.min(priceRange.max, Math.max(value, currentMin + 1));
-      setMaxPrice(Math.round(newMax));
+      const newMax = Math.min(priceRange.max, Math.max(roundedValue, currentMin + step));
+      setMaxPrice(newMax);
     }
   };
 
@@ -200,13 +209,19 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category, search
             if (!rect) return;
             const percentage = ((e.clientX - rect.left) / rect.width) * 100;
             const value = priceRange.min + (percentage / 100) * (priceRange.max - priceRange.min);
+            const step = priceRange.stepSize || 1;
+            const roundedValue = roundToStep(value, step);
             
             const currentMin = typeof minPrice === 'number' && !isNaN(minPrice) ? minPrice : priceRange.min;
             const currentMax = typeof maxPrice === 'number' && !isNaN(maxPrice) ? maxPrice : priceRange.max;
             
-            if (Math.abs(value - currentMin) < Math.abs(value - currentMax)) {
+            if (Math.abs(roundedValue - currentMin) < Math.abs(roundedValue - currentMax)) {
+              const newMin = Math.max(priceRange.min, Math.min(roundedValue, currentMax - step));
+              setMinPrice(newMin);
               handleMouseDown('min');
             } else {
+              const newMax = Math.min(priceRange.max, Math.max(roundedValue, currentMin + step));
+              setMaxPrice(newMax);
               handleMouseDown('max');
             }
           }}
