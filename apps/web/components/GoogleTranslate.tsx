@@ -120,18 +120,35 @@ export function GoogleTranslate() {
     style.textContent = `
       .goog-te-banner-frame {
         display: none !important;
+        visibility: hidden !important;
+      }
+      body {
+        top: 0 !important;
       }
       #google_translate_element {
         position: absolute !important;
         left: -9999px !important;
         opacity: 0 !important;
         pointer-events: none !important;
+        height: 0 !important;
+        width: 0 !important;
       }
       .goog-te-menu-frame {
+        display: none !important;
+        visibility: hidden !important;
+      }
+      .goog-tooltip,
+      .goog-tooltip:hover,
+      .goog-te-balloon-frame {
         display: none !important;
       }
       .skiptranslate {
         display: none !important;
+      }
+      iframe#goog-gt-tt,
+      .goog-te-balloon-frame {
+        display: none !important;
+        visibility: hidden !important;
       }
     `;
     document.head.appendChild(style);
@@ -142,6 +159,33 @@ export function GoogleTranslate() {
         document.head.removeChild(existingStyle);
       }
     };
+  }, []);
+
+  // Force-hide Google banner/balloon even when language changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hideGoogleElements = () => {
+      const selectors = [
+        '.goog-te-banner-frame',
+        '.goog-te-menu-frame',
+        '.goog-te-balloon-frame',
+        '#goog-gt-tt',
+      ];
+      selectors.forEach((selector) => {
+        const el = document.querySelector(selector);
+        if (el && el.parentElement) {
+          el.parentElement.removeChild(el);
+        }
+      });
+      document.body.style.top = '0px';
+    };
+
+    hideGoogleElements();
+    const observer = new MutationObserver(() => hideGoogleElements());
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
   }, []);
 
   // Detect current language from Google Translate

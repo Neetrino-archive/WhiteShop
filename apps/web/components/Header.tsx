@@ -20,6 +20,13 @@ type SocialLinks = {
 const socialLinks: SocialLinks =
   (contactData as typeof contactData & { social?: SocialLinks }).social || {};
 
+const primaryNavLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/categories', label: 'Products' },
+  { href: '/about', label: 'About Us' },
+  { href: '/contact', label: 'Contact' },
+];
+
 interface Category {
   id: string;
   slug: string;
@@ -183,10 +190,12 @@ export function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProductsMenu, setShowProductsMenu] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('USD');
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const currentYear = new Date().getFullYear();
 
   const currencyRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -460,6 +469,20 @@ export function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    if (mobileMenuOpen) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+  }, [mobileMenuOpen]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -479,8 +502,16 @@ export function Header() {
   // Close search modal on ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showSearchModal) {
+      if (e.key !== 'Escape') {
+        return;
+      }
+
+      if (showSearchModal) {
         setShowSearchModal(false);
+      }
+
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
       }
     };
 
@@ -488,7 +519,7 @@ export function Header() {
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [showSearchModal]);
+  }, [showSearchModal, mobileMenuOpen]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -525,18 +556,18 @@ export function Header() {
         />
       </Suspense>
       {/* Top Bar */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-10 text-sm">
+          <div className="flex flex-col gap-3 py-3 text-sm text-gray-700 sm:flex-row sm:items-center sm:justify-between">
             {/* Phone + Social */}
-            <div className="flex items-center gap-4 text-gray-700">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex items-center gap-2 text-gray-700">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2 3C2 2.44772 2.44772 2 3 2H5.15287C5.64171 2 6.0589 2.35341 6.13927 2.8356L6.87858 7.27147C6.95075 7.70451 6.73206 8.13397 6.3394 8.3303L4.79126 9.10437C5.90715 11.8783 8.12168 14.0929 10.8956 15.2088L11.6697 13.6606C11.866 13.2679 12.2955 13.0493 12.7285 13.1214L17.1644 13.8607C17.6466 13.9411 18 14.3583 18 14.8471V17C18 17.5523 17.5523 18 17 18H15C7.8203 18 2 12.1797 2 5V3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <span>{contactData.phone}</span>
+                <span className="font-medium">{contactData.phone}</span>
               </div>
-              <div className="flex items-center gap-3 text-gray-600 pl-3 border-l border-gray-200">
+              <div className="flex items-center gap-3 text-gray-600 sm:border-l sm:border-gray-200 sm:pl-3">
                 <a
                   href={socialLinks.instagram || '#'}
                   target="_blank"
@@ -568,21 +599,19 @@ export function Header() {
             </div>
 
             {/* Currency and Google Translate */}
-            <div className="flex items-center gap-4">
-              {/* Google Translate */}
+            <div className="flex flex-wrap items-center gap-4 sm:justify-end">
               <GoogleTranslate />
-              
-              {/* Currency Selector */}
               <div className="relative" ref={currencyRef}>
-                <div
+                <button
+                  type="button"
                   onClick={() => {
                     setShowCurrency(!showCurrency);
                   }}
                   className="flex items-center gap-1 cursor-pointer text-gray-700 hover:text-gray-900 transition-colors"
                 >
-                  <span className="text-sm">{selectedCurrency}</span>
+                  <span className="text-sm font-medium">{selectedCurrency}</span>
                   <ChevronDownIcon />
-                </div>
+                </button>
                 {showCurrency && (
                   <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-2xl border border-gray-200/80 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     {Object.values(CURRENCIES).map((currency) => (
@@ -610,26 +639,38 @@ export function Header() {
 
       {/* Main Header */}
       <div className="max-w-7xl mx-auto pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center flex-shrink-0 group">
-            <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent group-hover:from-gray-800 group-hover:to-gray-600 transition-all duration-300">
-              White-Shop
-            </span>
-          </Link>
+        <div className="flex flex-wrap items-center gap-4 py-4 md:py-3">
+          {/* Logo + Mobile Menu */}
+          <div className="flex w-full items-center justify-between md:w-auto md:justify-start">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="md:hidden w-10 h-10 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                aria-label="Open navigation menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <Link href="/" className="flex items-center flex-shrink-0 group">
+                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent group-hover:from-gray-800 group-hover:to-gray-600 transition-all duration-300">
+                  White-Shop
+                </span>
+              </Link>
+            </div>
+          </div>
 
           {/* Navigation Links - Centered */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
-            {/* Home Link */}
+          <nav className="order-3 hidden w-full items-center justify-center gap-1 md:order-none md:flex md:flex-1">
             <Link href="/" className="text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium whitespace-nowrap">
               Home
             </Link>
-            {/* Products with Categories Dropdown */}
             <div 
               className="relative" 
               ref={productsMenuRef}
               onMouseEnter={() => {
-                // Clear any pending timeout
                 if (productsMenuTimeoutRef.current) {
                   clearTimeout(productsMenuTimeoutRef.current);
                   productsMenuTimeoutRef.current = null;
@@ -637,7 +678,6 @@ export function Header() {
                 setShowProductsMenu(true);
               }}
               onMouseLeave={() => {
-                // Add small delay before closing to allow mouse movement to dropdown
                 productsMenuTimeoutRef.current = setTimeout(() => {
                   setShowProductsMenu(false);
                 }, 150);
@@ -652,7 +692,6 @@ export function Header() {
               </Link>
               {showProductsMenu && (
                 <>
-                  {/* Invisible bridge to prevent gap issues */}
                   <div className="absolute top-full left-0 w-full h-2" />
                   <div className="absolute top-full left-0 pt-2 w-64 z-50">
                     <div className="bg-white rounded-xl shadow-2xl border border-gray-200/80 overflow-hidden max-h-[400px] overflow-y-auto">
@@ -690,8 +729,16 @@ export function Header() {
             </Link>
           </nav>
 
+          {/* Mobile primary action */}
+          <Link
+            href="/products"
+            className="ml-auto flex h-10 items-center justify-center rounded-full border border-gray-900 px-4 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-900 hover:text-white md:hidden"
+          >
+            Shop
+          </Link>
+
           {/* Right Side Actions - Icons Only */}
-          <div className="flex items-center gap-2">
+          <div className="ml-auto hidden items-center gap-2 md:flex">
             {/* Search Icon Button */}
             <button
               onClick={() => {
@@ -781,6 +828,172 @@ export function Header() {
           </div>
 
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 flex md:hidden bg-black/40 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="h-full min-h-screen w-1/2 min-w-[16rem] max-w-full bg-white flex flex-col shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <p className="text-lg font-semibold text-gray-900">Navigation</p>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-10 h-10 rounded-full border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
+                aria-label="Close navigation menu"
+              >
+                <svg className="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-hidden min-h-0">
+              <nav className="flex h-full flex-col border-y border-gray-200 text-sm font-semibold uppercase tracking-wide text-gray-800 bg-white">
+                <div className="flex-1 overflow-y-auto divide-y divide-gray-200">
+                  {primaryNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                    >
+                      {link.label}
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  ))}
+
+                  <Link
+                    href="/wishlist"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                  >
+                    <span className="flex items-center gap-2 normal-case font-medium text-gray-700">
+                      <WishlistIcon />
+                      Wishlist
+                    </span>
+                    {wishlistCount > 0 && (
+                      <span className="rounded-full bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
+                        {wishlistCount > 99 ? '99+' : wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <Link
+                    href="/compare"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                  >
+                    <span className="flex items-center gap-2 normal-case font-medium text-gray-700">
+                      <CompareIcon />
+                      Compare
+                    </span>
+                    {compareCount > 0 && (
+                      <span className="rounded-full bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
+                        {compareCount > 99 ? '99+' : compareCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <Link
+                    href="/cart"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                  >
+                    <span className="flex items-center gap-2 normal-case font-medium text-gray-700">
+                      <CartIcon />
+                      Cart
+                    </span>
+                    {cartCount > 0 && (
+                      <span className="rounded-full bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
+                        {cartCount > 99 ? '99+' : cartCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  {isLoggedIn ? (
+                    <>
+                      <Link
+                        href="/profile"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 normal-case text-gray-800"
+                      >
+                        <span className="flex items-center gap-2">
+                          <ProfileIcon />
+                          Profile
+                        </span>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center justify-between px-4 py-3 hover:bg-blue-50 normal-case text-blue-700"
+                        >
+                          <span>Admin Panel</span>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          logout();
+                        }}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left text-red-600 hover:bg-red-50 normal-case font-semibold"
+                      >
+                        Logout
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 normal-case text-gray-800"
+                      >
+                        <span>Login</span>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                      <Link
+                        href="/register"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-4 py-3 hover:bg-gray-900 hover:text-white normal-case text-gray-900 font-semibold"
+                      >
+                        <span>Create account</span>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-200 px-4 py-4 text-xs font-medium tracking-wide text-gray-500 normal-case">
+                  © {currentYear} White-Shop
+                </div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search Modal */}
       {showSearchModal && (

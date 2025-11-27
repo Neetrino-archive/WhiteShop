@@ -10,6 +10,7 @@ import { BrandFilter } from '../../components/BrandFilter';
 import { ProductsHeader } from '../../components/ProductsHeader';
 import { ProductsGrid } from '../../components/ProductsGrid';
 import { CategoryNavigation } from '../../components/CategoryNavigation';
+import { MobileFiltersDrawer } from '../../components/MobileFiltersDrawer';
 
 interface Product {
   id: string;
@@ -179,30 +180,32 @@ export default async function ProductsPage({
 
         {/* Main Content - Products */}
         <div className="flex-1 min-w-0 py-4 pr-4 sm:pr-6 lg:pr-8">
-            {/* Mobile Filter - Show on small screens */}
-            <div className="lg:hidden mb-6 space-y-4">
-              <PriceFilter currentMinPrice={minPrice} currentMaxPrice={maxPrice} category={category} search={search} />
-              <ColorFilter 
-                category={category} 
-                search={search} 
-                minPrice={minPrice} 
-                maxPrice={maxPrice}
-                selectedColors={selectedColors}
-              />
-              <SizeFilter 
-                category={category} 
-                search={search} 
-                minPrice={minPrice} 
-                maxPrice={maxPrice}
-                selectedSizes={selectedSizes}
-              />
-              <BrandFilter 
-                category={category} 
-                search={search} 
-                minPrice={minPrice} 
-                maxPrice={maxPrice}
-                selectedBrand={brand}
-              />
+            {/* Mobile Filter Drawer */}
+            <div className="mb-6">
+              <MobileFiltersDrawer triggerLabel="Filters">
+                <PriceFilter currentMinPrice={minPrice} currentMaxPrice={maxPrice} category={category} search={search} />
+                <ColorFilter 
+                  category={category} 
+                  search={search} 
+                  minPrice={minPrice} 
+                  maxPrice={maxPrice}
+                  selectedColors={selectedColors}
+                />
+                <SizeFilter 
+                  category={category} 
+                  search={search} 
+                  minPrice={minPrice} 
+                  maxPrice={maxPrice}
+                  selectedSizes={selectedSizes}
+                />
+                <BrandFilter 
+                  category={category} 
+                  search={search} 
+                  minPrice={minPrice} 
+                  maxPrice={maxPrice}
+                  selectedBrand={brand}
+                />
+              </MobileFiltersDrawer>
             </div>
       
             {productsData.data.length > 0 ? (

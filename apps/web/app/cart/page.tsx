@@ -400,13 +400,13 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <div
               key={item.id}
-              className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 px-6 py-6 hover:bg-gray-50 transition-colors"
+              className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 px-4 sm:px-6 py-6 hover:bg-gray-50 transition-colors"
             >
               {/* Product */}
-              <div className="md:col-span-6 flex items-center gap-4">
+              <div className="md:col-span-6 flex items-start gap-4 relative">
                 <Link
                   href={`/products/${item.variant.product.slug}`}
-                  className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden"
+                  className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden"
                 >
                   {item.variant.product.image ? (
                     <Image
@@ -436,10 +436,22 @@ export default function CartPage() {
                     <p className="text-xs text-gray-500 mt-1">SKU: {item.variant.sku}</p>
                   )}
                 </div>
+                <button
+                  onClick={() => handleRemoveItem(item.id)}
+                  className="md:hidden absolute right-0 top-0 text-gray-400 hover:text-red-600 transition-colors"
+                  aria-label="Remove item"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
               {/* Quantity */}
-              <div className="md:col-span-2 flex items-center justify-center">
+              <div className="md:col-span-2 flex flex-col items-start justify-center md:flex-row md:items-center md:justify-center">
+                <p className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase md:hidden">
+                  Quantity
+                </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
@@ -476,14 +488,17 @@ export default function CartPage() {
               </div>
 
               {/* Subtotal */}
-              <div className="md:col-span-3 flex items-center justify-center md:justify-start md:ml-4">
-                <span className="text-base font-semibold text-blue-600">
+              <div className="md:col-span-3 flex flex-col md:flex-row md:items-center md:justify-start md:ml-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 md:hidden">
+                  Subtotal
+                </p>
+                <span className="text-lg font-semibold text-blue-600 mt-1 md:mt-0">
                   {formatPrice(item.total, currency)}
                 </span>
               </div>
 
               {/* Remove */}
-              <div className="md:col-span-1 flex items-center justify-center md:justify-end">
+              <div className="md:col-span-1 hidden md:flex items-center justify-center md:justify-end">
                 <button
                   onClick={() => handleRemoveItem(item.id)}
                   className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
@@ -502,7 +517,7 @@ export default function CartPage() {
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 lg:sticky lg:top-24">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             {getTranslation('cart.orderSummary', language)}
           </h2>
@@ -536,6 +551,16 @@ export default function CartPage() {
             }}
           >
             {getTranslation('cart.proceedToCheckout', language)}
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full mt-3"
+            size="md"
+            onClick={() => {
+              window.location.href = '/products';
+            }}
+          >
+            {getTranslation('wishlist.browseProducts', language)}
           </Button>
         </div>
         </div>

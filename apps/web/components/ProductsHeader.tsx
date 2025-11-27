@@ -78,17 +78,15 @@ function ProductsHeaderContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
-      <div className="flex justify-end items-center">
-        {/* View Mode Icons and Sort Dropdown */}
-        <div className="flex items-center gap-4">
-          {/* View Mode Icons */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* View Mode Icons */}
+        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
           <div className="flex items-center gap-2">
-            {/* List Icon */}
             <button
               onClick={() => handleViewModeChange('list')}
-              className={`p-2 transition-colors ${
+              className={`rounded-md border border-transparent p-2 transition-colors ${
                 viewMode === 'list'
-                  ? 'text-gray-900'
+                  ? 'bg-gray-100 text-gray-900 border-gray-300'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
               aria-label="List view"
@@ -99,16 +97,14 @@ function ProductsHeaderContent() {
                 <line x1="3" y1="15" x2="17" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
-
-            {/* 2x2 Grid Icon */}
             <button
               onClick={() => handleViewModeChange('grid-2')}
-              className={`p-2 transition-colors ${
+              className={`rounded-md border border-transparent p-2 transition-colors ${
                 viewMode === 'grid-2'
-                  ? 'text-gray-900'
+                  ? 'bg-gray-100 text-gray-900 border-gray-300'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
-              aria-label="2x2 grid view"
+              aria-label="2 column grid view"
             >
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="2" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
@@ -117,16 +113,14 @@ function ProductsHeaderContent() {
                 <rect x="11" y="11" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
               </svg>
             </button>
-
-            {/* 3x3 Grid Icon */}
             <button
               onClick={() => handleViewModeChange('grid-3')}
-              className={`p-2 transition-colors ${
+              className={`rounded-md border border-transparent p-2 transition-colors ${
                 viewMode === 'grid-3'
-                  ? 'text-gray-900'
+                  ? 'bg-gray-100 text-gray-900 border-gray-300'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
-              aria-label="3x3 grid view"
+              aria-label="3 column grid view"
             >
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="1.5" y="1.5" width="4.5" height="4.5" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-3' ? 'currentColor' : 'none'} />
@@ -141,14 +135,36 @@ function ProductsHeaderContent() {
               </svg>
             </button>
           </div>
+        </div>
 
-          {/* Sort Dropdown */}
-          <div className="relative" ref={sortDropdownRef}>
+        {/* Sort Controls */}
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+          {/* Native select for mobile */}
+          <div className="sm:hidden">
+            <label htmlFor="products-sort" className="sr-only">
+              Sort products
+            </label>
+            <select
+              id="products-sort"
+              value={sortBy}
+              onChange={(event) => handleSortChange(event.target.value as SortOption)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop dropdown */}
+          <div className="relative hidden sm:block" ref={sortDropdownRef}>
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-sm text-gray-700"
             >
-              <span>{sortOptions.find(opt => opt.value === sortBy)?.label || 'Default sorting'}</span>
+              <span className="font-medium">{sortOptions.find(opt => opt.value === sortBy)?.label || 'Default sorting'}</span>
               <svg
                 width="12"
                 height="12"
