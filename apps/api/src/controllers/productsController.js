@@ -234,9 +234,26 @@ const productsController = {
       // Apply pagination
       products = products.slice(skip, skip + parseInt(limit));
 
-      // Get global discount setting
-      const globalDiscountSetting = await Settings.findOne({ key: 'globalDiscount' }).lean();
-      const globalDiscount = globalDiscountSetting?.value || 0;
+      // Get discount-related settings
+      const discountSettingDocs = await Settings.find({
+        key: { $in: ['globalDiscount', 'categoryDiscounts', 'brandDiscounts'] },
+      }).lean();
+
+      const discountSettings = discountSettingDocs.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {});
+
+      const isPlainObject = (value) =>
+        value !== null && typeof value === 'object' && !Array.isArray(value);
+
+      const globalDiscount = Number(discountSettings.globalDiscount) || 0;
+      const categoryDiscounts = isPlainObject(discountSettings.categoryDiscounts)
+        ? discountSettings.categoryDiscounts
+        : {};
+      const brandDiscounts = isPlainObject(discountSettings.brandDiscounts)
+        ? discountSettings.brandDiscounts
+        : {};
 
       const response = {
         data: products.map((product) => {
@@ -251,16 +268,45 @@ const productsController = {
           let discountPrice = null;
           const productDiscount = product.discountPercent || 0;
 
-          // Apply product-specific discount first (if exists), otherwise apply global discount
+          const categoryIdSet = new Set();
+          if (Array.isArray(product.categoryIds)) {
+            product.categoryIds.forEach((categoryId) => {
+              if (categoryId) {
+                categoryIdSet.add(categoryId.toString());
+              }
+            });
+          }
+          if (product.primaryCategoryId) {
+            categoryIdSet.add(product.primaryCategoryId.toString());
+          }
+
+          const categoryDiscount = Array.from(categoryIdSet).reduce((max, categoryId) => {
+            const value = Number(categoryDiscounts[categoryId]) || 0;
+            return value > max ? value : max;
+          }, 0);
+
+          const brandId =
+            product.brandId && typeof product.brandId === 'object'
+              ? product.brandId._id?.toString()
+              : null;
+          const brandDiscount = brandId ? Number(brandDiscounts[brandId]) || 0 : 0;
+
+          const appliedDiscount =
+            productDiscount > 0
+              ? productDiscount
+              : categoryDiscount > 0
+              ? categoryDiscount
+              : brandDiscount > 0
+              ? brandDiscount
+              : globalDiscount > 0
+              ? globalDiscount
+              : 0;
+
           let actualDiscount = 0;
-          if (productDiscount > 0 && originalPrice > 0) {
+          if (appliedDiscount > 0 && originalPrice > 0) {
             discountPrice = originalPrice;
-            finalPrice = originalPrice * (1 - productDiscount / 100);
-            actualDiscount = productDiscount;
-          } else if (globalDiscount > 0 && originalPrice > 0) {
-            discountPrice = originalPrice;
-            finalPrice = originalPrice * (1 - globalDiscount / 100);
-            actualDiscount = globalDiscount;
+            finalPrice = originalPrice * (1 - appliedDiscount / 100);
+            actualDiscount = appliedDiscount;
           }
 
           // Process labels - update percentage labels with actual discount

@@ -59,6 +59,57 @@ const authenticateToken = async (req, res, next) => {
 };
 
 /**
+ * Optionally attach authenticated user if token exists
+ * Allows routes to behave as guest when no token provided
+ */
+const attachUserIfPresent = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId)
+      .select('-passwordHash')
+      .lean();
+
+    if (!user || user.blocked || user.deletedAt) {
+      return res.status(401).json({
+        type: 'https://api.shop.am/problems/unauthorized',
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'Invalid or expired token',
+        instance: req.path,
+      });
+    }
+
+    req.user = {
+      id: user._id.toString(),
+      email: user.email,
+      phone: user.phone,
+      locale: user.locale,
+      roles: user.roles || ['customer'],
+    };
+
+    next();
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        type: 'https://api.shop.am/problems/unauthorized',
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'Invalid or expired token',
+        instance: req.path,
+      });
+    }
+    next(error);
+  }
+};
+
+/**
  * Check if user is admin
  */
 const requireAdmin = (req, res, next) => {
@@ -87,4 +138,4 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticateToken, requireAdmin };
+module.exports = { authenticateToken, requireAdmin, attachUserIfPresent };

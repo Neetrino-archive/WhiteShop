@@ -30,6 +30,8 @@ router.delete('/products/:id', adminController.deleteProduct);
 router.get('/brands', adminController.getBrands);
 router.get('/categories', adminController.getCategories);
 router.get('/attributes', adminController.getAttributes);
+router.post('/attributes', adminController.createAttribute);
+router.post('/attributes/:id/values', adminController.addAttributeValue);
 
 // Recent activity
 router.get('/activity', adminController.getActivity);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../../lib/auth/AuthContext';
 import { Card, Button, Input } from '@shop/ui';
@@ -24,6 +24,7 @@ interface Attribute {
   key: string;
   name: string;
   type: string;
+  filterable?: boolean;
   values: Array<{
     id: string;
     value: string;
@@ -100,9 +101,25 @@ function AddProductPageContent() {
     categoryIds: [] as string[],
     published: false,
     imageUrls: [] as string[],
+    featuredImageIndex: 0,
     variants: [] as Variant[],
     labels: [] as ProductLabel[],
   });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const initialAttributeForm = {
+    name: '',
+    key: '',
+    type: 'select',
+    filterable: true,
+    values: [''],
+  };
+  const [newAttributeForm, setNewAttributeForm] = useState(initialAttributeForm);
+  const [creatingAttribute, setCreatingAttribute] = useState(false);
+  const [attributeMessage, setAttributeMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [variationInputs, setVariationInputs] = useState<Record<string, string>>({});
+  const [addingVariationId, setAddingVariationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading) {
@@ -188,6 +205,14 @@ function AddProductPageContent() {
             }
           });
           
+          const mediaList = product.media || [];
+          const normalizedMedia = Array.isArray(mediaList)
+            ? mediaList.map((item: any) => (typeof item === 'string' ? item : item?.url || ''))
+            : [];
+          const featuredIndexFromApi = Array.isArray(mediaList)
+            ? mediaList.findIndex((item: any) => typeof item === 'object' && item?.isFeatured)
+            : -1;
+
           setFormData({
             title: product.title || '',
             slug: product.slug || '',
@@ -197,7 +222,11 @@ function AddProductPageContent() {
             primaryCategoryId: product.primaryCategoryId || '',
             categoryIds: product.categoryIds || [],
             published: product.published || false,
-            imageUrls: product.media || [],
+            imageUrls: normalizedMedia,
+            featuredImageIndex:
+              featuredIndexFromApi >= 0 && featuredIndexFromApi < normalizedMedia.length
+                ? featuredIndexFromApi
+                : 0,
             variants: Array.from(variantMap.values()),
             labels: (product.labels || []).map((label: any) => ({
               id: label.id || '',
@@ -237,6 +266,40 @@ function AddProductPageContent() {
       ...prev,
       title,
       slug: prev.slug || generateSlug(title),
+    }));
+  };
+
+  const resetNewAttributeForm = () => {
+    setNewAttributeForm(initialAttributeForm);
+  };
+
+  const handleNewAttributeNameChange = (value: string) => {
+    setNewAttributeForm((prev) => ({
+      ...prev,
+      name: value,
+      key: prev.key || generateSlug(value),
+    }));
+  };
+
+  const handleAttributeValueFieldChange = (index: number, value: string) => {
+    setNewAttributeForm((prev) => {
+      const values = [...prev.values];
+      values[index] = value;
+      return { ...prev, values };
+    });
+  };
+
+  const addAttributeValueField = () => {
+    setNewAttributeForm((prev) => ({
+      ...prev,
+      values: [...prev.values, ''],
+    }));
+  };
+
+  const removeAttributeValueField = (index: number) => {
+    setNewAttributeForm((prev) => ({
+      ...prev,
+      values: prev.values.filter((_, i) => i !== index),
     }));
   };
 
@@ -412,10 +475,20 @@ function AddProductPageContent() {
   };
 
   const removeImageUrl = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const newUrls = prev.imageUrls.filter((_, i) => i !== index);
+      let featuredIndex = prev.featuredImageIndex;
+      if (index === featuredIndex) {
+        featuredIndex = 0;
+      } else if (index < featuredIndex) {
+        featuredIndex = Math.max(0, featuredIndex - 1);
+      }
+      return {
+        ...prev,
+        imageUrls: newUrls,
+        featuredImageIndex: newUrls.length === 0 ? 0 : Math.min(featuredIndex, newUrls.length - 1),
+      };
+    });
   };
 
   const updateImageUrl = (index: number, url: string) => {
@@ -424,6 +497,132 @@ function AddProductPageContent() {
       newUrls[index] = url;
       return { ...prev, imageUrls: newUrls };
     });
+  };
+
+  const setFeaturedImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      featuredImageIndex: index,
+    }));
+  };
+
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleUploadImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
+      return;
+    }
+
+    setImageUploadLoading(true);
+    setImageUploadError(null);
+    try {
+      const uploadedImages = await Promise.all(
+        files.map(async (file) => {
+          if (!file.type.startsWith('image/')) {
+            throw new Error(`"${file.name}" is not an image file`);
+          }
+          const base64 = await fileToBase64(file);
+          return base64;
+        })
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        imageUrls: [...prev.imageUrls, ...uploadedImages],
+      }));
+    } catch (error: any) {
+      setImageUploadError(error?.message || 'Failed to process selected images');
+    } finally {
+      setImageUploadLoading(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
+  const handleCreateAttribute = async () => {
+    setAttributeMessage(null);
+    const trimmedName = newAttributeForm.name.trim();
+    if (!trimmedName) {
+      setAttributeMessage({ type: 'error', text: 'Attribute name is required' });
+      return;
+    }
+
+    const attributeKey = (newAttributeForm.key || generateSlug(trimmedName)).trim();
+    if (!attributeKey) {
+      setAttributeMessage({ type: 'error', text: 'Attribute key is required' });
+      return;
+    }
+
+    const preparedValues = newAttributeForm.values
+      .map((val) => val.trim())
+      .filter(Boolean)
+      .map((label) => ({
+        label,
+        value: generateSlug(label),
+      }));
+
+    try {
+      setCreatingAttribute(true);
+      const response = await apiClient.post<{ data: Attribute }>('/api/v1/admin/attributes', {
+        name: trimmedName,
+        key: attributeKey,
+        type: newAttributeForm.type,
+        filterable: newAttributeForm.filterable,
+        values: preparedValues,
+      });
+      const createdAttribute = response.data;
+      if (createdAttribute) {
+        setAttributes((prev) => [...prev, createdAttribute]);
+        setAttributeMessage({ type: 'success', text: 'Attribute created successfully' });
+        resetNewAttributeForm();
+      }
+    } catch (err: any) {
+      setAttributeMessage({ type: 'error', text: err.message || 'Failed to create attribute' });
+    } finally {
+      setCreatingAttribute(false);
+    }
+  };
+
+  const handleAddVariation = async (attributeId: string) => {
+    const label = (variationInputs[attributeId] || '').trim();
+    setAttributeMessage(null);
+    if (!label) {
+      setAttributeMessage({ type: 'error', text: 'Variation label is required' });
+      return;
+    }
+
+    try {
+      setAddingVariationId(attributeId);
+      const response = await apiClient.post<{ data: Attribute }>(
+        `/api/v1/admin/attributes/${attributeId}/values`,
+        {
+          label,
+        }
+      );
+      const updatedAttribute = response.data;
+      if (updatedAttribute) {
+        setAttributes((prev) =>
+          prev.map((attr) => (attr.id === attributeId ? updatedAttribute : attr))
+        );
+        setVariationInputs((prev) => ({
+          ...prev,
+          [attributeId]: '',
+        }));
+        setAttributeMessage({ type: 'success', text: 'Variation added successfully' });
+      }
+    } catch (err: any) {
+      setAttributeMessage({ type: 'error', text: err.message || 'Failed to add variation' });
+    } finally {
+      setAddingVariationId(null);
+    }
   };
 
   // Label management functions
@@ -542,9 +741,24 @@ function AddProductPageContent() {
       }
 
       // Prepare media array
-      const media = formData.imageUrls
+      const orderedImageUrls = [...formData.imageUrls];
+      if (
+        orderedImageUrls.length > 0 &&
+        formData.featuredImageIndex >= 0 &&
+        formData.featuredImageIndex < orderedImageUrls.length
+      ) {
+        const [featured] = orderedImageUrls.splice(formData.featuredImageIndex, 1);
+        orderedImageUrls.unshift(featured);
+      }
+
+      const media = orderedImageUrls
         .filter((url) => url.trim())
-        .map((url) => ({ url: url.trim(), type: 'image' }));
+        .map((url, index) => ({
+          url: url.trim(),
+          type: 'image',
+          position: index,
+          isFeatured: index === 0,
+        }));
 
       // Prepare variants array
       // Create variants for all combinations of colors and sizes with their respective stocks
@@ -931,35 +1145,306 @@ function AddProductPageContent() {
 
             {/* Images */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Product Images</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Product Images</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload images directly or paste image URLs. Mark one image as the main/featured photo to show everywhere first.
+              </p>
+
+              {imageUploadError && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {imageUploadError}
+                </div>
+              )}
+
               <div className="space-y-3">
-                {formData.imageUrls.map((url, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      type="url"
-                      value={url}
-                      onChange={(e) => updateImageUrl(index, e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => removeImageUrl(index)}
-                      className="px-4"
-                    >
-                      Remove
-                    </Button>
+                {formData.imageUrls.length === 0 ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-500">
+                    No images added yet. Upload files or paste image URLs to get started.
                   </div>
-                ))}
+                ) : (
+                  formData.imageUrls.map((url, index) => (
+                    <div
+                      key={`${url}-${index}`}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row">
+                        <div className="sm:w-40">
+                          <div className="aspect-square w-full rounded-md border border-gray-200 bg-white flex items-center justify-center overflow-hidden">
+                            {url ? (
+                              <>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={url}
+                                  alt={`Preview ${index + 1}`}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-400">No preview</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          <Input
+                            type="url"
+                            value={url}
+                            onChange={(e) => updateImageUrl(index, e.target.value)}
+                            placeholder="https://example.com/image.jpg"
+                          />
+                          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="featured-image"
+                                checked={formData.featuredImageIndex === index}
+                                onChange={() => setFeaturedImage(index)}
+                              />
+                              Set as main image
+                            </label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => removeImageUrl(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={imageUploadLoading}
+                  className="w-full sm:w-auto"
+                >
+                  {imageUploadLoading ? 'Processing...' : 'Upload Images'}
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={addImageUrl}
-                  className="w-full"
+                  className="w-full sm:w-auto"
                 >
                   + Add Image URL
                 </Button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleUploadImages}
+              />
+            </div>
+
+            {/* Attributes & Variations */}
+            <div>
+              <div className="flex flex-col gap-2 mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Attributes & Variations</h2>
+                <p className="text-sm text-gray-600">
+                  Manage product attributes (size, material, color, etc.) and define their available values.
+                  Newly created attributes become available immediately for all products.
+                </p>
+                {attributeMessage && (
+                  <div
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      attributeMessage.type === 'success'
+                        ? 'border-green-200 bg-green-50 text-green-700'
+                        : 'border-red-200 bg-red-50 text-red-700'
+                    }`}
+                  >
+                    {attributeMessage.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Existing attributes</h3>
+                  {attributes.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No attributes yet. Create one using the form below.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {attributes.map((attribute) => (
+                        <div
+                          key={attribute.id}
+                          className="rounded-md border border-gray-100 bg-gray-50 p-4"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {attribute.name}{' '}
+                                  <span className="text-xs font-normal text-gray-500">
+                                    ({attribute.key})
+                                  </span>
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Type: {attribute.type} • Filterable:{' '}
+                                  {attribute.filterable ? 'Yes' : 'No'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {attribute.values.length === 0 ? (
+                                <span className="text-xs text-gray-500">No variations yet</span>
+                              ) : (
+                                attribute.values.map((value) => (
+                                  <span
+                                    key={value.id}
+                                    className="rounded-full bg-white px-2 py-1 text-xs text-gray-700 border border-gray-200"
+                                  >
+                                    {value.label}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                              <Input
+                                placeholder="Add variation (e.g. Large, Cotton)"
+                                value={variationInputs[attribute.id] || ''}
+                                onChange={(e) =>
+                                  setVariationInputs((prev) => ({
+                                    ...prev,
+                                    [attribute.id]: e.target.value,
+                                  }))
+                                }
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleAddVariation(attribute.id)}
+                                disabled={addingVariationId === attribute.id}
+                              >
+                                {addingVariationId === attribute.id ? 'Adding...' : 'Add Variation'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Create new attribute</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Attribute Name *
+                      </label>
+                      <Input
+                        value={newAttributeForm.name}
+                        onChange={(e) => handleNewAttributeNameChange(e.target.value)}
+                        placeholder="e.g. Size"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Attribute Key *
+                      </label>
+                      <Input
+                        value={newAttributeForm.key}
+                        onChange={(e) =>
+                          setNewAttributeForm((prev) => ({ ...prev, key: e.target.value }))
+                        }
+                        placeholder="size"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                      <select
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newAttributeForm.type}
+                        onChange={(e) =>
+                          setNewAttributeForm((prev) => ({ ...prev, type: e.target.value }))
+                        }
+                      >
+                        <option value="select">Select</option>
+                        <option value="text">Text</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="attribute-filterable"
+                        type="checkbox"
+                        checked={newAttributeForm.filterable}
+                        onChange={(e) =>
+                          setNewAttributeForm((prev) => ({
+                            ...prev,
+                            filterable: e.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                      />
+                      <label htmlFor="attribute-filterable" className="text-sm text-gray-700">
+                        Filterable
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Variations</p>
+                    <div className="space-y-2">
+                      {newAttributeForm.values.map((value, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={value}
+                            onChange={(e) => handleAttributeValueFieldChange(index, e.target.value)}
+                            placeholder="Value label (e.g. Small, Cotton)"
+                          />
+                          {newAttributeForm.values.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => removeAttributeValueField(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={addAttributeValueField}
+                      className="mt-2"
+                    >
+                      + Add Variation
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={handleCreateAttribute}
+                      disabled={creatingAttribute}
+                    >
+                      {creatingAttribute ? 'Creating...' : 'Create Attribute'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={resetNewAttributeForm}>
+                      Reset
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
 

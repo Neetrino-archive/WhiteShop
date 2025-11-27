@@ -6,6 +6,24 @@ import { useAuth } from '../../../lib/auth/AuthContext';
 import { Card, Button, Input } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
 
+interface AdminSettingsResponse {
+  globalDiscount: number;
+  categoryDiscounts?: Record<string, number>;
+  brandDiscounts?: Record<string, number>;
+}
+
+interface AdminCategory {
+  id: string;
+  title: string;
+  parentId: string | null;
+}
+
+interface AdminBrand {
+  id: string;
+  name: string;
+  logoUrl?: string;
+}
+
 export default function QuickSettingsPage() {
   const { isLoggedIn, isAdmin, isLoading, user } = useAuth();
   const router = useRouter();
@@ -17,13 +35,23 @@ export default function QuickSettingsPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productDiscounts, setProductDiscounts] = useState<Record<string, number>>({});
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
+  const [categoryDiscounts, setCategoryDiscounts] = useState<Record<string, number>>({});
+  const [brandDiscounts, setBrandDiscounts] = useState<Record<string, number>>({});
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [brands, setBrands] = useState<AdminBrand[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [brandsLoading, setBrandsLoading] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [brandSaving, setBrandSaving] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
       console.log('⚙️ [QUICK SETTINGS] Fetching settings...');
       setDiscountLoading(true);
-      const settings = await apiClient.get<{ globalDiscount: number }>('/api/v1/admin/settings');
+      const settings = await apiClient.get<AdminSettingsResponse>('/api/v1/admin/settings');
       setGlobalDiscount(settings.globalDiscount || 0);
+      setCategoryDiscounts(settings.categoryDiscounts || {});
+      setBrandDiscounts(settings.brandDiscounts || {});
       console.log('✅ [QUICK SETTINGS] Settings loaded:', settings);
     } catch (err: any) {
       console.error('❌ [QUICK SETTINGS] Error fetching settings:', err);
@@ -60,6 +88,114 @@ export default function QuickSettingsPage() {
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      console.log('📂 [QUICK SETTINGS] Fetching categories...');
+      setCategoriesLoading(true);
+      const response = await apiClient.get<{ data: AdminCategory[] }>('/api/v1/admin/categories');
+      if (response?.data && Array.isArray(response.data)) {
+        setCategories(response.data);
+        console.log('✅ [QUICK SETTINGS] Categories loaded:', response.data.length);
+      } else {
+        setCategories([]);
+      }
+    } catch (err: any) {
+      console.error('❌ [QUICK SETTINGS] Error fetching categories:', err);
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, []);
+
+  const fetchBrands = useCallback(async () => {
+    try {
+      console.log('🏷️ [QUICK SETTINGS] Fetching brands...');
+      setBrandsLoading(true);
+      const response = await apiClient.get<{ data: AdminBrand[] }>('/api/v1/admin/brands');
+      if (response?.data && Array.isArray(response.data)) {
+        setBrands(response.data);
+        console.log('✅ [QUICK SETTINGS] Brands loaded:', response.data.length);
+      } else {
+        setBrands([]);
+      }
+    } catch (err: any) {
+      console.error('❌ [QUICK SETTINGS] Error fetching brands:', err);
+      setBrands([]);
+    } finally {
+      setBrandsLoading(false);
+    }
+  }, []);
+
+  const clampDiscountValue = (value: number) => {
+    if (isNaN(value)) {
+      return 0;
+    }
+    return Math.min(100, Math.max(0, Math.round(value * 100) / 100));
+  };
+
+  const updateCategoryDiscountValue = (categoryId: string, value: string) => {
+    if (value === '') {
+      setCategoryDiscounts((prev) => {
+        const updated = { ...prev };
+        delete updated[categoryId];
+        return updated;
+      });
+      return;
+    }
+    const numericValue = clampDiscountValue(parseFloat(value));
+    setCategoryDiscounts((prev) => ({
+      ...prev,
+      [categoryId]: numericValue,
+    }));
+  };
+
+  const updateBrandDiscountValue = (brandId: string, value: string) => {
+    if (value === '') {
+      setBrandDiscounts((prev) => {
+        const updated = { ...prev };
+        delete updated[brandId];
+        return updated;
+      });
+      return;
+    }
+    const numericValue = clampDiscountValue(parseFloat(value));
+    setBrandDiscounts((prev) => ({
+      ...prev,
+      [brandId]: numericValue,
+    }));
+  };
+
+  const clearCategoryDiscount = (categoryId: string) => {
+    setCategoryDiscounts((prev) => {
+      const updated = { ...prev };
+      delete updated[categoryId];
+      return updated;
+    });
+  };
+
+  const clearBrandDiscount = (brandId: string) => {
+    setBrandDiscounts((prev) => {
+      const updated = { ...prev };
+      delete updated[brandId];
+      return updated;
+    });
+  };
+
+  const buildDiscountPayload = () => {
+    const filterMap = (map: Record<string, number>) =>
+      Object.entries(map || {}).reduce<Record<string, number>>((acc, [id, value]) => {
+        if (typeof value === 'number' && value > 0) {
+          acc[id] = clampDiscountValue(value);
+        }
+        return acc;
+      }, {});
+
+    return {
+      categoryDiscounts: filterMap(categoryDiscounts),
+      brandDiscounts: filterMap(brandDiscounts),
+    };
+  };
+
   const handleDiscountSave = async () => {
     const discountValue = parseFloat(globalDiscount.toString());
     if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
@@ -72,6 +208,7 @@ export default function QuickSettingsPage() {
       console.log('⚙️ [QUICK SETTINGS] Saving global discount...', discountValue);
       await apiClient.put('/api/v1/admin/settings', {
         globalDiscount: discountValue,
+        ...buildDiscountPayload(),
       });
       
       // Refresh products to get updated labels with new discount percentage
@@ -85,6 +222,46 @@ export default function QuickSettingsPage() {
       alert(`Error: ${errorMessage}`);
     } finally {
       setDiscountSaving(false);
+    }
+  };
+
+  const handleCategoryDiscountSave = async () => {
+    setCategorySaving(true);
+    try {
+      console.log('⚙️ [QUICK SETTINGS] Saving category discounts...');
+      await apiClient.put('/api/v1/admin/settings', {
+        globalDiscount,
+        ...buildDiscountPayload(),
+      });
+      await fetchProducts();
+      alert('Category discounts saved successfully!');
+      console.log('✅ [QUICK SETTINGS] Category discounts saved');
+    } catch (err: any) {
+      console.error('❌ [QUICK SETTINGS] Error saving category discounts:', err);
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to save';
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const handleBrandDiscountSave = async () => {
+    setBrandSaving(true);
+    try {
+      console.log('⚙️ [QUICK SETTINGS] Saving brand discounts...');
+      await apiClient.put('/api/v1/admin/settings', {
+        globalDiscount,
+        ...buildDiscountPayload(),
+      });
+      await fetchProducts();
+      alert('Brand discounts saved successfully!');
+      console.log('✅ [QUICK SETTINGS] Brand discounts saved');
+    } catch (err: any) {
+      console.error('❌ [QUICK SETTINGS] Error saving brand discounts:', err);
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to save';
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setBrandSaving(false);
     }
   };
 
@@ -127,8 +304,10 @@ export default function QuickSettingsPage() {
     if (!isLoading && isLoggedIn && isAdmin) {
       fetchSettings();
       fetchProducts();
+      fetchCategories();
+      fetchBrands();
     }
-  }, [isLoading, isLoggedIn, isAdmin, fetchSettings, fetchProducts]);
+  }, [isLoading, isLoggedIn, isAdmin, fetchSettings, fetchProducts, fetchCategories, fetchBrands]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -451,6 +630,162 @@ export default function QuickSettingsPage() {
                   </div>
                 </div>
               </div>
+            </Card>
+
+            {/* Category Discounts */}
+            <Card className="p-6 mb-8 bg-white border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Category Discounts</h2>
+                  <p className="text-sm text-gray-600">Apply discounts to every product inside a category</p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleCategoryDiscountSave}
+                  disabled={categorySaving || categories.length === 0}
+                >
+                  {categorySaving ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Saving...</span>
+                    </div>
+                  ) : (
+                    'Save'
+                  )}
+                </Button>
+              </div>
+
+              {categoriesLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading categories...</p>
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-6 text-gray-600 border border-dashed border-gray-200 rounded">
+                  No categories found
+                </div>
+              ) : (
+                <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
+                  {categories.map((category) => {
+                    const currentValue = categoryDiscounts[category.id];
+                    return (
+                      <div
+                        key={category.id}
+                        className="flex items-center gap-4 px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {category.title || 'Untitled category'}
+                          </p>
+                          {category.parentId ? (
+                            <p className="text-xs text-gray-500">Parent Category ID: {category.parentId}</p>
+                          ) : (
+                            <p className="text-xs text-gray-500">Root category</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={currentValue === undefined ? '' : currentValue}
+                            onChange={(e) => updateCategoryDiscountValue(category.id, e.target.value)}
+                            className="w-24"
+                            placeholder="0"
+                          />
+                          <span className="text-sm font-medium text-gray-700">%</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => clearCategoryDiscount(category.id)}
+                            disabled={currentValue === undefined}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            {/* Brand Discounts */}
+            <Card className="p-6 mb-8 bg-white border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Brand Discounts</h2>
+                  <p className="text-sm text-gray-600">Set discounts for products of a specific brand</p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleBrandDiscountSave}
+                  disabled={brandSaving || brands.length === 0}
+                >
+                  {brandSaving ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Saving...</span>
+                    </div>
+                  ) : (
+                    'Save'
+                  )}
+                </Button>
+              </div>
+
+              {brandsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading brands...</p>
+                </div>
+              ) : brands.length === 0 ? (
+                <div className="text-center py-6 text-gray-600 border border-dashed border-gray-200 rounded">
+                  No brands found
+                </div>
+              ) : (
+                <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
+                  {brands.map((brand) => {
+                    const currentValue = brandDiscounts[brand.id];
+                    return (
+                      <div
+                        key={brand.id}
+                        className="flex items-center gap-4 px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {brand.name || 'Untitled brand'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Brand ID: <span className="font-mono text-gray-600">{brand.id}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={currentValue === undefined ? '' : currentValue}
+                            onChange={(e) => updateBrandDiscountValue(brand.id, e.target.value)}
+                            className="w-24"
+                            placeholder="0"
+                          />
+                          <span className="text-sm font-medium text-gray-700">%</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => clearBrandDiscount(brand.id)}
+                            disabled={currentValue === undefined}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
 
             {/* Products List with Individual Discounts */}

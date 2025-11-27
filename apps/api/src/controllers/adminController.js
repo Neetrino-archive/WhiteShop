@@ -7,6 +7,42 @@ const Attribute = require('../models/Attribute');
 const Settings = require('../models/Settings');
 const { safeRedis } = require('../lib/redis');
 
+const slugify = (text = '') =>
+  text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const formatAttribute = (attribute, lang = 'en') => {
+  if (!attribute) {
+    return null;
+  }
+
+  const attrObj = attribute.toObject ? attribute.toObject() : attribute;
+  const translation =
+    attrObj.translations?.find((t) => t.locale === lang) || attrObj.translations?.[0];
+
+  return {
+    id: attrObj._id?.toString(),
+    key: attrObj.key,
+    name: translation?.name || attrObj.key,
+    type: attrObj.type,
+    filterable: attrObj.filterable,
+    values: (attrObj.values || []).map((val) => {
+      const valTranslation =
+        val.translations?.find((t) => t.locale === lang) || val.translations?.[0];
+      return {
+        id: val._id?.toString() || val.value,
+        value: val.value,
+        label: valTranslation?.label || val.value,
+      };
+    }),
+  };
+};
+
 const adminController = {
   /**
    * Get admin dashboard statistics
@@ -1941,34 +1977,166 @@ const adminController = {
     try {
       console.log('🔧 [ADMIN] Fetching attributes...');
       const { lang = 'en' } = req.query;
-      const attributes = await Attribute.find()
-        .sort({ position: 1 })
-        .lean();
+      const attributes = await Attribute.find().sort({ position: 1 });
 
       const result = {
-        data: attributes.map((attribute) => {
-          const translation = attribute.translations?.find((t) => t.locale === lang) || attribute.translations?.[0];
-          return {
-            id: attribute._id.toString(),
-            key: attribute.key,
-            name: translation?.name || attribute.key,
-            type: attribute.type,
-            values: (attribute.values || []).map((val) => {
-              const valTranslation = val.translations?.find((t) => t.locale === lang) || val.translations?.[0];
-              return {
-                id: val._id?.toString() || val.value,
-                value: val.value,
-                label: valTranslation?.label || val.value,
-              };
-            }),
-          };
-        }),
+        data: attributes.map((attribute) => formatAttribute(attribute, lang)),
       };
 
       console.log(`✅ [ADMIN] Found ${result.data.length} attributes`);
       res.json(result);
     } catch (error) {
       console.error('❌ [ADMIN] Error fetching attributes:', error);
+      next(error);
+    }
+  },
+
+  /**
+   * Create attribute with variations
+   * POST /api/v1/admin/attributes
+   */
+  async createAttribute(req, res, next) {
+    try {
+      const {
+        key,
+        name,
+        type = 'select',
+        filterable = true,
+        locale = 'en',
+        values = [],
+        position = 0,
+      } = req.body;
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({
+          type: 'https://api.shop.am/problems/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: 'Attribute name is required',
+          instance: req.path,
+        });
+      }
+
+      const normalizedKey = slugify(key && key.trim() ? key : name);
+      if (!normalizedKey) {
+        return res.status(400).json({
+          type: 'https://api.shop.am/problems/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: 'Attribute key is required',
+          instance: req.path,
+        });
+      }
+
+      const existing = await Attribute.findOne({ key: normalizedKey });
+      if (existing) {
+        return res.status(409).json({
+          type: 'https://api.shop.am/problems/conflict',
+          title: 'Conflict',
+          status: 409,
+          detail: `Attribute with key '${normalizedKey}' already exists`,
+          instance: req.path,
+        });
+      }
+
+      const preparedValues = Array.isArray(values)
+        ? values
+            .filter((val) => val && (val.value || val.label))
+            .map((val, idx) => {
+              const valueSlug = slugify(val.value || val.label);
+              return {
+                value: valueSlug,
+                position: val.position ?? idx,
+                translations: [
+                  {
+                    locale,
+                    label: val.label || val.value || valueSlug,
+                  },
+                ],
+              };
+            })
+        : [];
+
+      const attribute = await Attribute.create({
+        key: normalizedKey,
+        type,
+        filterable,
+        position,
+        translations: [
+          {
+            locale,
+            name: name.trim(),
+          },
+        ],
+        values: preparedValues,
+      });
+
+      res.status(201).json({
+        data: formatAttribute(attribute, locale),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Add variation to attribute
+   * POST /api/v1/admin/attributes/:id/values
+   */
+  async addAttributeValue(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { value, label, locale = 'en', position } = req.body;
+
+      if ((!value || !value.trim()) && (!label || !label.trim())) {
+        return res.status(400).json({
+          type: 'https://api.shop.am/problems/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: 'Value or label is required',
+          instance: req.path,
+        });
+      }
+
+      const attribute = await Attribute.findById(id);
+      if (!attribute) {
+        return res.status(404).json({
+          type: 'https://api.shop.am/problems/not-found',
+          title: 'Attribute not found',
+          status: 404,
+          detail: `Attribute with id '${id}' does not exist`,
+          instance: req.path,
+        });
+      }
+
+      const normalizedValue = slugify(value || label);
+      if (attribute.values?.some((val) => val.value === normalizedValue)) {
+        return res.status(409).json({
+          type: 'https://api.shop.am/problems/conflict',
+          title: 'Conflict',
+          status: 409,
+          detail: `Value '${normalizedValue}' already exists for this attribute`,
+          instance: req.path,
+        });
+      }
+
+      attribute.values.push({
+        value: normalizedValue,
+        position: position ?? attribute.values.length,
+        translations: [
+          {
+            locale,
+            label: label || value || normalizedValue,
+          },
+        ],
+      });
+
+      await attribute.save();
+
+      res.status(201).json({
+        data: formatAttribute(attribute, locale),
+      });
+    } catch (error) {
       next(error);
     }
   },
@@ -2224,6 +2392,12 @@ const adminController = {
       if (settingsObj.globalDiscount === undefined) {
         settingsObj.globalDiscount = 0;
       }
+      if (!settingsObj.categoryDiscounts || typeof settingsObj.categoryDiscounts !== 'object') {
+        settingsObj.categoryDiscounts = {};
+      }
+      if (!settingsObj.brandDiscounts || typeof settingsObj.brandDiscounts !== 'object') {
+        settingsObj.brandDiscounts = {};
+      }
 
       console.log('✅ [ADMIN] Settings fetched:', settingsObj);
       res.json(settingsObj);
@@ -2242,19 +2416,59 @@ const adminController = {
       console.log('⚙️ [ADMIN] Updating settings...');
       console.log('⚙️ [ADMIN] Update data:', JSON.stringify(req.body, null, 2));
 
-      const { globalDiscount } = req.body;
+      const { globalDiscount, categoryDiscounts, brandDiscounts } = req.body;
+
+      const buildValidationError = (detail) => ({
+        type: 'https://api.shop.am/problems/validation-error',
+        title: 'Validation Error',
+        status: 400,
+        detail,
+        instance: req.path,
+      });
+
+      const sanitizeDiscountMap = (map, label) => {
+        if (map === undefined) {
+          return undefined;
+        }
+        if (map === null) {
+          return {};
+        }
+        if (typeof map !== 'object' || Array.isArray(map)) {
+          throw new Error(`${label} must be an object where keys are IDs and values are discounts`);
+        }
+
+        return Object.entries(map).reduce((acc, [id, value]) => {
+          if (!id) {
+            return acc;
+          }
+          const discountValue = parseFloat(value);
+          if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
+            throw new Error(`${label} values must be numbers between 0 and 100`);
+          }
+          if (discountValue > 0) {
+            acc[id] = Math.round(discountValue * 100) / 100;
+          }
+          return acc;
+        }, {});
+      };
+
+      let sanitizedCategoryDiscounts;
+      let sanitizedBrandDiscounts;
+
+      try {
+        sanitizedCategoryDiscounts = sanitizeDiscountMap(categoryDiscounts, 'Category discounts');
+        sanitizedBrandDiscounts = sanitizeDiscountMap(brandDiscounts, 'Brand discounts');
+      } catch (validationError) {
+        return res.status(400).json(buildValidationError(validationError.message));
+      }
 
       // Validate globalDiscount
       if (globalDiscount !== undefined) {
         const discountValue = parseFloat(globalDiscount);
         if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
-          return res.status(400).json({
-            type: 'https://api.shop.am/problems/validation-error',
-            title: 'Validation Error',
-            status: 400,
-            detail: 'Global discount must be a number between 0 and 100',
-            instance: req.path,
-          });
+          return res.status(400).json(
+            buildValidationError('Global discount must be a number between 0 and 100')
+          );
         }
 
         // Update or create globalDiscount setting
@@ -2269,6 +2483,38 @@ const adminController = {
         );
 
         console.log('✅ [ADMIN] Global discount updated:', discountValue);
+      }
+
+      if (sanitizedCategoryDiscounts !== undefined) {
+        await Settings.findOneAndUpdate(
+          { key: 'categoryDiscounts' },
+          {
+            key: 'categoryDiscounts',
+            value: sanitizedCategoryDiscounts,
+            description: 'Category-based discount percentages applied to matching products (0-100)',
+          },
+          { upsert: true, new: true }
+        );
+        console.log(
+          '✅ [ADMIN] Category discounts updated:',
+          Object.keys(sanitizedCategoryDiscounts).length
+        );
+      }
+
+      if (sanitizedBrandDiscounts !== undefined) {
+        await Settings.findOneAndUpdate(
+          { key: 'brandDiscounts' },
+          {
+            key: 'brandDiscounts',
+            value: sanitizedBrandDiscounts,
+            description: 'Brand-based discount percentages applied to matching products (0-100)',
+          },
+          { upsert: true, new: true }
+        );
+        console.log(
+          '✅ [ADMIN] Brand discounts updated:',
+          Object.keys(sanitizedBrandDiscounts).length
+        );
       }
 
       // Invalidate products cache to apply new discount
@@ -2293,6 +2539,12 @@ const adminController = {
 
       if (settingsObj.globalDiscount === undefined) {
         settingsObj.globalDiscount = 0;
+      }
+      if (!settingsObj.categoryDiscounts || typeof settingsObj.categoryDiscounts !== 'object') {
+        settingsObj.categoryDiscounts = {};
+      }
+      if (!settingsObj.brandDiscounts || typeof settingsObj.brandDiscounts !== 'object') {
+        settingsObj.brandDiscounts = {};
       }
 
       res.json(settingsObj);
