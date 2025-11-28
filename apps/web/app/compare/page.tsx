@@ -39,6 +39,9 @@ function getCompare(): string[] {
 }
 
 
+/**
+ * Compare page renders up to four products side-by-side with quick actions.
+ */
 export default function ComparePage() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
@@ -65,68 +68,65 @@ export default function ComparePage() {
     [language]
   );
 
-  useEffect(() => {
-    // Get compare IDs from localStorage
-    const ids = getCompare();
-    setCompareIds(ids);
-
-    if (ids.length === 0) {
+  /**
+   * Fetch compare products for provided ids and update UI state.
+   */
+  const fetchCompareProducts = useCallback(async (idsToLoad: string[]) => {
+    if (idsToLoad.length === 0) {
+      console.info('[Compare] Skip fetch because ids array is empty');
+      setProducts([]);
       setLoading(false);
       return;
     }
 
-    // Fetch products by IDs
-    async function fetchProducts() {
-      try {
-        setLoading(true);
-        // Fetch all products and filter by compare IDs
-        const language = getStoredLanguage();
-        const response = await apiClient.get<{
-          data: Product[];
-          meta: {
-            total: number;
-            page: number;
-            limit: number;
-            totalPages: number;
-          };
-        }>('/api/v1/products', {
-          params: {
-            limit: '1000', // Get all products to filter
-            lang: language,
-          },
-        });
+    try {
+      setLoading(true);
+      console.info(`[Compare] Fetching ${idsToLoad.length} products for render`);
+      const languagePreference = getStoredLanguage();
+      const response = await apiClient.get<{
+        data: Product[];
+        meta: {
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        };
+      }>('/api/v1/products', {
+        params: {
+          limit: '1000',
+          lang: languagePreference,
+        },
+      });
 
-        // Filter products that are in compare
-        const compareProducts = response.data.filter((product) =>
-          ids.includes(product.id)
-        );
-        setProducts(compareProducts);
-      } catch (error) {
-        console.error('Error fetching compare products:', error);
-      } finally {
-        setLoading(false);
-      }
+      const compareProducts = response.data.filter((product) =>
+        idsToLoad.includes(product.id)
+      );
+      setProducts(compareProducts);
+    } catch (error) {
+      console.error('[Compare] Error fetching compare products:', error);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    fetchProducts();
+  useEffect(() => {
+    // Get compare IDs from localStorage
+    const ids = getCompare();
+    setCompareIds(ids);
+    fetchCompareProducts(ids);
 
     // Listen for compare updates
     const handleCompareUpdate = () => {
       const updatedIds = getCompare();
       setCompareIds(updatedIds);
-      if (updatedIds.length === 0) {
-        setProducts([]);
-      } else {
-        // Re-fetch if needed
-        fetchProducts();
-      }
+      fetchCompareProducts(updatedIds);
     };
 
     window.addEventListener('compare-updated', handleCompareUpdate);
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
     };
-  }, []);
+  }, [fetchCompareProducts]);
 
   // Listen for currency and language updates
   useEffect(() => {
@@ -150,6 +150,7 @@ export default function ComparePage() {
     e.preventDefault();
     e.stopPropagation();
     
+    console.info(`[Compare] Removing product ${productId} from compare UI`);
     const updatedIds = compareIds.filter((id) => id !== productId);
     localStorage.setItem(COMPARE_KEY, JSON.stringify(updatedIds));
     setCompareIds(updatedIds);

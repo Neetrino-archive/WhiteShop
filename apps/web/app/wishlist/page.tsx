@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -37,6 +37,9 @@ function getWishlist(): string[] {
   }
 }
 
+/**
+ * Wishlist page that shows saved products and supports lightweight CRUD actions.
+ */
 export default function WishlistPage() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
@@ -47,61 +50,58 @@ export default function WishlistPage() {
   const [currency, setCurrency] = useState(getStoredCurrency());
   const [addingToCart, setAddingToCart] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    // Get wishlist IDs from localStorage
-    const ids = getWishlist();
-    setWishlistIds(ids);
-
-    if (ids.length === 0) {
+  /**
+   * Fetches wishlist products for provided ids and updates component state.
+   */
+  const fetchWishlistProducts = useCallback(async (idsToLoad: string[]) => {
+    if (idsToLoad.length === 0) {
+      console.info('[Wishlist] Skip fetch because ids array is empty');
+      setProducts([]);
       setLoading(false);
       return;
     }
 
-    // Fetch products by IDs
-    async function fetchProducts() {
-      try {
-        setLoading(true);
-        // Fetch all products and filter by wishlist IDs
-        const language = getStoredLanguage();
-        const response = await apiClient.get<{
-          data: Product[];
-          meta: {
-            total: number;
-            page: number;
-            limit: number;
-            totalPages: number;
-          };
-        }>('/api/v1/products', {
-          params: {
-            limit: '1000', // Get all products to filter
-            lang: language,
-          },
-        });
+    try {
+      setLoading(true);
+      console.info(`[Wishlist] Fetching ${idsToLoad.length} products for render`);
+      const languagePreference = getStoredLanguage();
+      const response = await apiClient.get<{
+        data: Product[];
+        meta: {
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        };
+      }>('/api/v1/products', {
+        params: {
+          limit: '1000',
+          lang: languagePreference,
+        },
+      });
 
-        // Filter products that are in wishlist
-        const wishlistProducts = response.data.filter((product) =>
-          ids.includes(product.id)
-        );
-        setProducts(wishlistProducts);
-      } catch (error) {
-        console.error('Error fetching wishlist products:', error);
-      } finally {
-        setLoading(false);
-      }
+      const wishlistProducts = response.data.filter((product) =>
+        idsToLoad.includes(product.id)
+      );
+      setProducts(wishlistProducts);
+    } catch (error) {
+      console.error('[Wishlist] Error fetching wishlist products:', error);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    fetchProducts();
+  useEffect(() => {
+    // Get wishlist IDs from localStorage
+    const ids = getWishlist();
+    setWishlistIds(ids);
+    fetchWishlistProducts(ids);
 
     // Listen for wishlist updates
     const handleWishlistUpdate = () => {
       const updatedIds = getWishlist();
       setWishlistIds(updatedIds);
-      if (updatedIds.length === 0) {
-        setProducts([]);
-      } else {
-        // Re-fetch if needed
-        fetchProducts();
-      }
+      fetchWishlistProducts(updatedIds);
     };
 
     const handleLanguageUpdate = () => {
@@ -120,9 +120,10 @@ export default function WishlistPage() {
       window.removeEventListener('language-updated', handleLanguageUpdate);
       window.removeEventListener('currency-updated', handleCurrencyUpdate);
     };
-  }, []);
+  }, [fetchWishlistProducts]);
 
   const handleRemove = (productId: string) => {
+    console.info(`[Wishlist] Removing product ${productId} from wishlist UI`);
     const updatedIds = wishlistIds.filter((id) => id !== productId);
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(updatedIds));
     setWishlistIds(updatedIds);

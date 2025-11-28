@@ -11,6 +11,7 @@ import { CART_KEY, getCompareCount, getWishlistCount } from '../lib/storageCount
 import { GoogleTranslate } from './GoogleTranslate';
 import contactData from '../../../config/contact.json';
 import { Instagram, Facebook, Linkedin } from 'lucide-react';
+import { CompareIcon } from './icons/CompareIcon';
 
 type SocialLinks = {
   instagram?: string;
@@ -54,15 +55,6 @@ const ProfileIcon = () => (
   </svg>
 );
 
-const CompareIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Left arrow pointing right */}
-    <path d="M3 10L7 6M3 10L7 14M3 10H17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    {/* Right arrow pointing left */}
-    <path d="M17 10L13 6M17 10L13 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-  
 const WishlistIcon = () => (
   <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M10 17L8.55 15.7C4.4 12.2 2 10.1 2 7.5C2 5.4 3.4 4 5.5 4C6.8 4 8.1 4.6 9 5.5C9.9 4.6 11.2 4 12.5 4C14.6 4 16 5.4 16 7.5C16 10.1 13.6 12.2 9.45 15.7L10 17Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -784,7 +776,7 @@ export function Header() {
 
               {/* Compare */}
               <Link href="/compare" className="w-10 h-10 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all duration-200 relative group">
-                <BadgeIcon icon={<CompareIcon />} badge={compareCount} />
+                <BadgeIcon icon={<CompareIcon size={18} />} badge={compareCount} />
               </Link>
 
               {/* Wishlist */}
@@ -871,7 +863,7 @@ export function Header() {
                     className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
                   >
                     <span className="flex items-center gap-2 normal-case font-medium text-gray-700">
-                      <CompareIcon />
+                      <CompareIcon size={18} />
                       Compare
                     </span>
                     {compareCount > 0 && (

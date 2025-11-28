@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { formatPrice, getStoredCurrency } from '../lib/currency';
 import { apiClient } from '../lib/api-client';
 import { useAuth } from '../lib/auth/AuthContext';
+import { CompareIcon } from './icons/CompareIcon';
 
 interface ProductLabel {
   id: string;
@@ -44,19 +45,6 @@ const WISHLIST_KEY = 'shop_wishlist';
 const COMPARE_KEY = 'shop_compare';
 
 // Иконки
-const CompareIcon = ({ filled = false }: { filled?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path 
-      d="M3 10L7 6M3 10L7 14M3 10H17M17 10L13 6M17 10L13 14" 
-      stroke="currentColor" 
-      strokeWidth="1.8" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      fill={filled ? "currentColor" : "none"}
-    />
-  </svg>
-);
-
 const WishlistIcon = ({ filled = false }: { filled?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path 
@@ -193,6 +181,10 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
       const compare: string[] = stored ? JSON.parse(stored) : [];
       
       // Максимум 4 продукта для сравнения
+      console.info('[Compare] Toggling compare from ProductCard', {
+        productId: product.id,
+        action: isInCompare ? 'remove' : 'add',
+      });
       if (isInCompare) {
         const updated = compare.filter((id) => id !== product.id);
         localStorage.setItem(COMPARE_KEY, JSON.stringify(updated));
@@ -394,15 +386,15 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
               {/* Compare Icon */}
               <button
                 onClick={handleCompareToggle}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                   isInCompare
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'border-gray-900 text-gray-900 bg-white shadow-sm'
+                    : 'border-gray-200 text-gray-700 bg-white hover:border-gray-300 hover:bg-gray-50'
                 }`}
                 title={isInCompare ? 'Remove from compare' : 'Add to compare'}
                 aria-label={isInCompare ? 'Remove from compare' : 'Add to compare'}
               >
-                <CompareIcon filled={isInCompare} />
+                <CompareIcon isActive={isInCompare} />
               </button>
 
               {/* Wishlist Icon */}
@@ -525,28 +517,15 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
           {/* Compare Icon */}
           <button
             onClick={handleCompareToggle}
-            className={`${isCompact ? 'w-10 h-10' : 'w-12 h-12'} rounded-full flex items-center justify-center transition-all duration-200 ${
+            className={`${isCompact ? 'w-10 h-10' : 'w-12 h-12'} rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
               isInCompare
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md hover:shadow-lg'
+                ? 'border-gray-900 text-gray-900 bg-white shadow-sm'
+                : 'border-gray-200 text-gray-700 bg-white hover:border-gray-300 hover:bg-gray-50'
             }`}
             title={isInCompare ? 'Remove from compare' : 'Add to compare'}
             aria-label={isInCompare ? 'Remove from compare' : 'Add to compare'}
           >
-            {isCompact ? (
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path 
-                  d="M3 10L7 6M3 10L7 14M3 10H17M17 10L13 6M17 10L13 14" 
-                  stroke="currentColor" 
-                  strokeWidth="1.8" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  fill={isInCompare ? "currentColor" : "none"}
-                />
-              </svg>
-            ) : (
-              <CompareIcon filled={isInCompare} />
-            )}
+            <CompareIcon isActive={isInCompare} size={isCompact ? 16 : 18} />
           </button>
 
           {/* Wishlist Icon */}

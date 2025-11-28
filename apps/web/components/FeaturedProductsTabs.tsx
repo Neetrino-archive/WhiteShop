@@ -45,6 +45,8 @@ const tabs: Tab[] = [
 ];
 
 const PRODUCTS_PER_PAGE = 10;
+const MOBILE_GRID_LAYOUT =
+  'grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
 /**
  * FeaturedProductsTabs Component
@@ -106,6 +108,7 @@ export function FeaturedProductsTabs() {
   // Load products on mount
   useEffect(() => {
     fetchProducts(null); // Load all products for "NEW OFFERS"
+    console.log('🧱 [FeaturedProductsTabs] Mobile grid locked to 2 columns on phones');
   }, []);
 
   return (
@@ -149,7 +152,7 @@ export function FeaturedProductsTabs() {
 
         {/* Products Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className={MOBILE_GRID_LAYOUT}>
             {[...Array(PRODUCTS_PER_PAGE)].map((_, i) => (
               <div key={i} className="bg-white rounded-lg overflow-hidden animate-pulse">
                 <div className="aspect-square bg-gray-200"></div>
@@ -175,7 +178,7 @@ export function FeaturedProductsTabs() {
             </button>
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className={MOBILE_GRID_LAYOUT}>
             {products.slice(0, PRODUCTS_PER_PAGE).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

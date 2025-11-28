@@ -10,6 +10,7 @@ import { useAuth } from '../../../lib/auth/AuthContext';
 import { RelatedProducts } from '../../../components/RelatedProducts';
 import { ProductReviews } from '../../../components/ProductReviews';
 import { Heart, Minus, Plus } from 'lucide-react';
+import { CompareIcon } from '../../../components/icons/CompareIcon';
 
 interface ProductPageProps {
   params: Promise<{ slug?: string }>;
@@ -70,16 +71,6 @@ const RESERVED_ROUTES = ['admin', 'login', 'register', 'cart', 'checkout', 'prof
 
 const WISHLIST_KEY = 'shop_wishlist';
 const COMPARE_KEY = 'shop_compare';
-
-// Compare Icon Component (same as in Header)
-const CompareIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Left arrow pointing right */}
-    <path d="M3 10L7 6M3 10L7 14M3 10H17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    {/* Right arrow pointing left */}
-    <path d="M17 10L13 6M17 10L13 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 export default function ProductPage({ params }: ProductPageProps) {
   const router = useRouter();
@@ -986,10 +977,10 @@ const handleCompareToggle = (e: React.MouseEvent) => {
                 <button
                   type="button"
                   onClick={handleCompareToggle}
-                  className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center transition-all ${
+                  className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
                     isInCompare
-                      ? 'border-gray-900 text-gray-900 bg-gray-50'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      ? 'border-gray-900 text-gray-900 bg-white shadow-sm'
+                      : 'border-gray-200 text-gray-600 bg-white hover:border-gray-300 hover:bg-gray-50'
                   }`}
                   aria-label={isInCompare ? 'Remove from compare' : 'Add to compare'}
                 >
