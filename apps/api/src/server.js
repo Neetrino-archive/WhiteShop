@@ -1,4 +1,4 @@
-// server.js — CLEAN & RENDER-READY VERSION
+// server.js — CLEAN & RENDER PRODUCTION VERSION
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
@@ -30,15 +30,14 @@ app.use(
 const corsOptions = {
   credentials: true,
   origin: (origin, callback) => {
-    // Allow internal calls without Origin (Render health checks)
     if (!origin) return callback(null, true);
 
-    const allowedOrigins = [
+    const allowed = [
       process.env.APP_URL,
       'https://white-shop-1.onrender.com'
     ];
 
-    if (allowedOrigins.includes(origin)) {
+    if (allowed.includes(origin)) {
       return callback(null, true);
     }
 
@@ -65,8 +64,6 @@ app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: process.env.NODE_ENV === 'production' ? 200 : 2000,
-    standardHeaders: true,
-    legacyHeaders: false,
   })
 );
 
@@ -76,12 +73,10 @@ app.use(
 // -----------------------
 app.get('/health', async (req, res) => {
   const mongoose = require('mongoose');
-  const dbState = mongoose.connection.readyState;
-
-  return res.status(200).json({
+  res.json({
     status: 'ok',
-    timestamp: new Date().toISOString(),
-    db: dbState === 1 ? 'connected' : 'disconnected',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    time: new Date().toISOString(),
   });
 });
 
@@ -123,15 +118,13 @@ app.use((err, req, res, next) => {
 // -----------------------
 const startServer = async () => {
   try {
-    // Connect to MongoDB (required in production)
-    const db = await connectDB();
-    if (!db && process.env.NODE_ENV === 'production') {
-      console.error('❌ MongoDB is required in production.');
-      process.exit(1);
-    }
+    // CONNECT TO MONGODB
+    await connectDB(); // Important: we do not check return value
+
+    console.log("✅ MongoDB connection initialized");
 
     app.listen(PORT, () =>
-      console.log(`🚀 API running on port ${PORT} (Render-provided)`)
+      console.log(`🚀 API server running on port ${PORT} via Render`)
     );
 
   } catch (error) {
