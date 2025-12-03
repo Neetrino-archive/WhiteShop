@@ -7,7 +7,6 @@ import { Card, Button, Input } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
 
 interface Settings {
-  globalDiscount: number;
 }
 
 export default function SettingsPage() {
@@ -15,9 +14,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<Settings>({
-    globalDiscount: 0,
-  });
+  const [settings, setSettings] = useState<Settings>({});
 
   useEffect(() => {
     if (!isLoading) {
@@ -39,14 +36,12 @@ export default function SettingsPage() {
       setLoading(true);
       console.log('⚙️ [ADMIN] Fetching settings...');
       const data = await apiClient.get<Settings>('/api/v1/admin/settings');
-      setSettings({
-        globalDiscount: data.globalDiscount || 0,
-      });
+      setSettings({});
       console.log('✅ [ADMIN] Settings loaded:', data);
     } catch (err: any) {
       console.error('❌ [ADMIN] Error fetching settings:', err);
       // Use defaults if error
-      setSettings({ globalDiscount: 0 });
+      setSettings({});
     } finally {
       setLoading(false);
     }
@@ -56,18 +51,8 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       console.log('⚙️ [ADMIN] Saving settings...', settings);
-      
-      // Validate globalDiscount
-      const discountValue = parseFloat(settings.globalDiscount.toString());
-      if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
-        alert('Global discount must be a number between 0 and 100');
-        setSaving(false);
-        return;
-      }
 
-      await apiClient.put('/api/v1/admin/settings', {
-        globalDiscount: discountValue,
-      });
+      await apiClient.put('/api/v1/admin/settings', {});
       
       alert('Settings saved successfully!');
       console.log('✅ [ADMIN] Settings saved');
@@ -181,51 +166,6 @@ export default function SettingsPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="noreply@example.com"
               />
-            </div>
-          </div>
-        </Card>
-
-        {/* Discount Settings */}
-        <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Discount Settings</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Global Discount Percentage
-              </label>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={settings.globalDiscount}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSettings((prev) => ({
-                      ...prev,
-                      globalDiscount: value === '' ? 0 : parseFloat(value) || 0,
-                    }));
-                  }}
-                  className="w-32"
-                  placeholder="0"
-                />
-                <span className="text-sm text-gray-600">%</span>
-                <span className="text-sm text-gray-500">
-                  (Applied to all products)
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-gray-500">
-                Enter a percentage (0-100) to apply a global discount to all products. 
-                For example, enter 10 for 10% discount or 50 for 50% discount.
-              </p>
-              {settings.globalDiscount > 0 && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    <strong>Active:</strong> All products will have a {settings.globalDiscount}% discount applied.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </Card>

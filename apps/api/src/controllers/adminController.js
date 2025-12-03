@@ -1961,10 +1961,159 @@ const adminController = {
             slug: translation?.slug || '',
             title: translation?.title || '',
             parentId: category.parentId?.toString() || null,
+            requiresSizes: category.requiresSizes || false,
           };
         }),
       });
     } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Create new brand (admin only)
+   * POST /api/v1/admin/brands
+   */
+  async createBrand(req, res, next) {
+    try {
+      console.log('🏷️ [ADMIN] Creating new brand...');
+      const { name, locale = 'en' } = req.body;
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({
+          type: 'https://api.shop.am/problems/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: 'Brand name is required',
+          instance: req.path,
+        });
+      }
+
+      const brandSlug = slugify(name.trim());
+
+      // Check if brand with this slug already exists
+      const existingBrand = await Brand.findOne({ slug: brandSlug, deletedAt: null });
+      if (existingBrand) {
+        const translation = existingBrand.translations?.[0];
+        return res.json({
+          data: {
+            id: existingBrand._id.toString(),
+            slug: existingBrand.slug,
+            name: translation?.name || name.trim(),
+            logoUrl: existingBrand.logoUrl,
+            published: existingBrand.published,
+          },
+        });
+      }
+
+      // Create new brand
+      const brand = await Brand.create({
+        slug: brandSlug,
+        published: true,
+        translations: [
+          {
+            locale,
+            name: name.trim(),
+          },
+        ],
+      });
+
+      const translation = brand.translations?.[0];
+      console.log('✅ [ADMIN] Brand created successfully:', brand._id.toString());
+
+      res.json({
+        data: {
+          id: brand._id.toString(),
+          slug: brand.slug,
+          name: translation?.name || name.trim(),
+          logoUrl: brand.logoUrl,
+          published: brand.published,
+        },
+      });
+    } catch (error) {
+      console.error('❌ [ADMIN] Error creating brand:', error);
+      next(error);
+    }
+  },
+
+  /**
+   * Create new category (admin only)
+   * POST /api/v1/admin/categories
+   */
+  async createCategory(req, res, next) {
+    try {
+      console.log('📁 [ADMIN] Creating new category...');
+      const { title, parentId = null, locale = 'en', requiresSizes = false } = req.body;
+
+      if (!title || !title.trim()) {
+        return res.status(400).json({
+          type: 'https://api.shop.am/problems/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: 'Category title is required',
+          instance: req.path,
+        });
+      }
+
+      const categorySlug = slugify(title.trim());
+
+      // Check if category with this slug already exists
+      const existingCategory = await Category.findOne({
+        'translations.slug': categorySlug,
+        'translations.locale': locale,
+        deletedAt: null,
+      });
+
+      if (existingCategory) {
+        const translation = existingCategory.translations?.find((t) => t.locale === locale) || existingCategory.translations?.[0];
+        return res.json({
+          data: {
+            id: existingCategory._id.toString(),
+            slug: translation?.slug || '',
+            title: translation?.title || title.trim(),
+            parentId: existingCategory.parentId?.toString() || null,
+            requiresSizes: existingCategory.requiresSizes || false,
+          },
+        });
+      }
+
+      // Get max position for new category
+      const maxPosition = await Category.findOne({ deletedAt: null })
+        .sort({ position: -1 })
+        .select('position')
+        .lean();
+      const newPosition = (maxPosition?.position || 0) + 1;
+
+      // Create new category
+      const category = await Category.create({
+        parentId: parentId || null,
+        position: newPosition,
+        published: true,
+        requiresSizes: Boolean(requiresSizes),
+        translations: [
+          {
+            locale,
+            title: title.trim(),
+            slug: categorySlug,
+            fullPath: categorySlug,
+          },
+        ],
+      });
+
+      const translation = category.translations?.[0];
+      console.log('✅ [ADMIN] Category created successfully:', category._id.toString(), 'requiresSizes:', category.requiresSizes);
+
+      res.json({
+        data: {
+          id: category._id.toString(),
+          slug: translation?.slug || '',
+          title: translation?.title || title.trim(),
+          parentId: category.parentId?.toString() || null,
+          requiresSizes: category.requiresSizes || false,
+        },
+      });
+    } catch (error) {
+      console.error('❌ [ADMIN] Error creating category:', error);
       next(error);
     }
   },

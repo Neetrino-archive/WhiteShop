@@ -28,7 +28,9 @@ router.delete('/products/:id', adminController.deleteProduct);
 
 // Brands and categories for dropdowns
 router.get('/brands', adminController.getBrands);
+router.post('/brands', adminController.createBrand);
 router.get('/categories', adminController.getCategories);
+router.post('/categories', adminController.createCategory);
 router.get('/attributes', adminController.getAttributes);
 router.post('/attributes', adminController.createAttribute);
 router.post('/attributes/:id/values', adminController.addAttributeValue);

@@ -171,13 +171,28 @@ export default function ProductsPage() {
     try {
       const newStatus = !currentStatus;
       
-      // Получаем полный продукт, чтобы сохранить все его данные, включая media
+      // Получаем полный продукт, чтобы сохранить все его данные, включая media и variants
       let existingMedia: string[] = [];
+      let existingVariants: any[] = [];
       try {
         const fullProduct = await apiClient.get(`/api/v1/admin/products/${productId}`);
         if (fullProduct.media && Array.isArray(fullProduct.media)) {
           existingMedia = fullProduct.media;
           console.log('📸 [ADMIN] Found existing media:', existingMedia);
+        }
+        if (fullProduct.variants && Array.isArray(fullProduct.variants)) {
+          // Преобразуем variants в формат, который ожидает API
+          existingVariants = fullProduct.variants.map((variant: any) => ({
+            sku: variant.sku || '',
+            price: variant.price?.toString() || '0',
+            compareAtPrice: variant.compareAtPrice?.toString() || '',
+            stock: variant.stock?.toString() || '0',
+            imageUrl: variant.imageUrl || '',
+            published: variant.published !== false,
+            color: variant.options?.find((opt: any) => opt.attributeKey === 'color' || opt.key === 'color')?.value || '',
+            size: variant.options?.find((opt: any) => opt.attributeKey === 'size' || opt.key === 'size')?.value || '',
+          }));
+          console.log('📦 [ADMIN] Found existing variants:', existingVariants.length);
         }
       } catch (fetchErr) {
         console.warn('⚠️ [ADMIN] Could not fetch full product, using current product data:', fetchErr);
@@ -197,6 +212,12 @@ export default function ProductsPage() {
       if (existingMedia.length > 0) {
         updateData.media = existingMedia;
         console.log('📸 [ADMIN] Preserving media:', existingMedia);
+      }
+      
+      // Сохраняем существующие variants, чтобы price и stock не пропали
+      if (existingVariants.length > 0) {
+        updateData.variants = existingVariants;
+        console.log('📦 [ADMIN] Preserving variants:', existingVariants.length);
       }
       
       await apiClient.put(`/api/v1/admin/products/${productId}`, updateData);

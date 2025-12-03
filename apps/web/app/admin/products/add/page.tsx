@@ -17,6 +17,7 @@ interface Category {
   title: string;
   slug: string;
   parentId: string | null;
+  requiresSizes?: boolean;
 }
 
 interface Attribute {
@@ -108,18 +109,17 @@ function AddProductPageContent() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imageUploadLoading, setImageUploadLoading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
-  const initialAttributeForm = {
-    name: '',
-    key: '',
-    type: 'select',
-    filterable: true,
-    values: [''],
-  };
-  const [newAttributeForm, setNewAttributeForm] = useState(initialAttributeForm);
-  const [creatingAttribute, setCreatingAttribute] = useState(false);
-  const [attributeMessage, setAttributeMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [variationInputs, setVariationInputs] = useState<Record<string, string>>({});
-  const [addingVariationId, setAddingVariationId] = useState<string | null>(null);
+  const [newBrandName, setNewBrandName] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryRequiresSizes, setNewCategoryRequiresSizes] = useState(false);
+  const [useNewBrand, setUseNewBrand] = useState(false);
+  const [useNewCategory, setUseNewCategory] = useState(false);
+  const [newColorName, setNewColorName] = useState('');
+  const [newSizeName, setNewSizeName] = useState('');
+  const [addingColor, setAddingColor] = useState(false);
+  const [addingSize, setAddingSize] = useState(false);
+  const [colorMessage, setColorMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [sizeMessage, setSizeMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (!isLoading) {
@@ -237,6 +237,13 @@ function AddProductPageContent() {
             })),
           });
           
+          // Reset new brand/category fields when loading existing product
+          setUseNewBrand(false);
+          setUseNewCategory(false);
+          setNewBrandName('');
+          setNewCategoryName('');
+          setNewCategoryRequiresSizes(false);
+          
           console.log('✅ [ADMIN] Product loaded for edit');
         } catch (err: any) {
           console.error('❌ [ADMIN] Error loading product:', err);
@@ -255,7 +262,7 @@ function AddProductPageContent() {
     return title
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
+      .replace(/[^\w\s-|]/g, '') // Allow pipe character (|) in slug
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '');
   };
@@ -269,47 +276,25 @@ function AddProductPageContent() {
     }));
   };
 
-  const resetNewAttributeForm = () => {
-    setNewAttributeForm(initialAttributeForm);
-  };
-
-  const handleNewAttributeNameChange = (value: string) => {
-    setNewAttributeForm((prev) => ({
-      ...prev,
-      name: value,
-      key: prev.key || generateSlug(value),
-    }));
-  };
-
-  const handleAttributeValueFieldChange = (index: number, value: string) => {
-    setNewAttributeForm((prev) => {
-      const values = [...prev.values];
-      values[index] = value;
-      return { ...prev, values };
-    });
-  };
-
-  const addAttributeValueField = () => {
-    setNewAttributeForm((prev) => ({
-      ...prev,
-      values: [...prev.values, ''],
-    }));
-  };
-
-  const removeAttributeValueField = (index: number) => {
-    setNewAttributeForm((prev) => ({
-      ...prev,
-      values: prev.values.filter((_, i) => i !== index),
-    }));
-  };
-
-  // Check if selected category requires sizes (clothing or shoes)
+  // Check if selected category requires sizes
   const isClothingCategory = () => {
+    // If adding new category and requiresSizes is checked, return true
+    if (useNewCategory && newCategoryRequiresSizes) {
+      return true;
+    }
+    
+    // If no category selected, return false
     if (!formData.primaryCategoryId) return false;
+    
     const selectedCategory = categories.find((cat) => cat.id === formData.primaryCategoryId);
     if (!selectedCategory) return false;
     
-    // Check by slug or title (clothing, shoes, одежда, հագուստ, կոշիկ, etc.)
+    // First check if category has requiresSizes field set
+    if (selectedCategory.requiresSizes !== undefined) {
+      return selectedCategory.requiresSizes;
+    }
+    
+    // Fallback: Check by slug or title (clothing, shoes, одежда, հագուստ, կոշիկ, etc.)
     const sizeRequiredSlugs = ['clothing', 'odezhda', 'hagust', 'apparel', 'fashion', 'shoes', 'koshik', 'obuv'];
     const sizeRequiredTitles = ['clothing', 'одежда', 'հագուստ', 'apparel', 'fashion', 'shoes', 'կոշիկ', 'обувь'];
     
@@ -591,39 +576,6 @@ function AddProductPageContent() {
     }
   };
 
-  const handleAddVariation = async (attributeId: string) => {
-    const label = (variationInputs[attributeId] || '').trim();
-    setAttributeMessage(null);
-    if (!label) {
-      setAttributeMessage({ type: 'error', text: 'Variation label is required' });
-      return;
-    }
-
-    try {
-      setAddingVariationId(attributeId);
-      const response = await apiClient.post<{ data: Attribute }>(
-        `/api/v1/admin/attributes/${attributeId}/values`,
-        {
-          label,
-        }
-      );
-      const updatedAttribute = response.data;
-      if (updatedAttribute) {
-        setAttributes((prev) =>
-          prev.map((attr) => (attr.id === attributeId ? updatedAttribute : attr))
-        );
-        setVariationInputs((prev) => ({
-          ...prev,
-          [attributeId]: '',
-        }));
-        setAttributeMessage({ type: 'success', text: 'Variation added successfully' });
-      }
-    } catch (err: any) {
-      setAttributeMessage({ type: 'error', text: err.message || 'Failed to add variation' });
-    } finally {
-      setAddingVariationId(null);
-    }
-  };
 
   // Label management functions
   const addLabel = () => {
@@ -657,12 +609,139 @@ function AddProductPageContent() {
   const getColorAttribute = () => attributes.find((attr) => attr.key === 'color');
   const getSizeAttribute = () => attributes.find((attr) => attr.key === 'size');
 
+  // Add new color to color attribute
+  const handleAddColor = async () => {
+    setColorMessage(null);
+    const colorAttribute = getColorAttribute();
+    if (!colorAttribute) {
+      setColorMessage({ type: 'error', text: 'Color attribute not found' });
+      return;
+    }
+
+    if (!newColorName.trim()) {
+      setColorMessage({ type: 'error', text: 'Color name is required' });
+      return;
+    }
+
+    try {
+      setAddingColor(true);
+      const response = await apiClient.post<{ data: Attribute }>(`/api/v1/admin/attributes/${colorAttribute.id}/values`, {
+        label: newColorName.trim(),
+        locale: 'en',
+      });
+      
+      if (response.data) {
+        // Update attributes list
+        setAttributes((prev) => 
+          prev.map((attr) => 
+            attr.id === colorAttribute.id ? response.data : attr
+          )
+        );
+        setColorMessage({ type: 'success', text: `Color "${newColorName.trim()}" added successfully` });
+        setNewColorName('');
+        // Clear message after 3 seconds
+        setTimeout(() => setColorMessage(null), 3000);
+      }
+    } catch (err: any) {
+      setColorMessage({ type: 'error', text: err.message || 'Failed to add color' });
+    } finally {
+      setAddingColor(false);
+    }
+  };
+
+  // Add new size to size attribute
+  const handleAddSize = async () => {
+    setSizeMessage(null);
+    const sizeAttribute = getSizeAttribute();
+    if (!sizeAttribute) {
+      setSizeMessage({ type: 'error', text: 'Size attribute not found' });
+      return;
+    }
+
+    if (!newSizeName.trim()) {
+      setSizeMessage({ type: 'error', text: 'Size name is required' });
+      return;
+    }
+
+    try {
+      setAddingSize(true);
+      const response = await apiClient.post<{ data: Attribute }>(`/api/v1/admin/attributes/${sizeAttribute.id}/values`, {
+        label: newSizeName.trim(),
+        locale: 'en',
+      });
+      
+      if (response.data) {
+        // Update attributes list
+        setAttributes((prev) => 
+          prev.map((attr) => 
+            attr.id === sizeAttribute.id ? response.data : attr
+          )
+        );
+        setSizeMessage({ type: 'success', text: `Size "${newSizeName.trim()}" added successfully` });
+        setNewSizeName('');
+        // Clear message after 3 seconds
+        setTimeout(() => setSizeMessage(null), 3000);
+      }
+    } catch (err: any) {
+      setSizeMessage({ type: 'error', text: err.message || 'Failed to add size' });
+    } finally {
+      setAddingSize(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       console.log('📝 [ADMIN] Submitting product form:', formData);
+
+      // Create new brand if provided
+      let finalBrandId = formData.brandId;
+      if (useNewBrand && newBrandName.trim()) {
+        try {
+          console.log('🏷️ [ADMIN] Creating new brand:', newBrandName);
+          const brandResponse = await apiClient.post<{ data: Brand }>('/api/v1/admin/brands', {
+            name: newBrandName.trim(),
+            locale: 'en',
+          });
+          if (brandResponse.data) {
+            finalBrandId = brandResponse.data.id;
+            // Add to brands list for future use
+            setBrands((prev) => [...prev, brandResponse.data]);
+            console.log('✅ [ADMIN] Brand created:', brandResponse.data.id);
+          }
+        } catch (err: any) {
+          console.error('❌ [ADMIN] Error creating brand:', err);
+          alert(`Չհաջողվեց ստեղծել brand: ${err.message || 'Unknown error'}`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Create new category if provided
+      let finalPrimaryCategoryId = formData.primaryCategoryId;
+      if (useNewCategory && newCategoryName.trim()) {
+        try {
+          console.log('📁 [ADMIN] Creating new category:', newCategoryName, 'requiresSizes:', newCategoryRequiresSizes);
+          const categoryResponse = await apiClient.post<{ data: Category }>('/api/v1/admin/categories', {
+            title: newCategoryName.trim(),
+            locale: 'en',
+            requiresSizes: newCategoryRequiresSizes,
+          });
+          if (categoryResponse.data) {
+            finalPrimaryCategoryId = categoryResponse.data.id;
+            // Add to categories list for future use
+            setCategories((prev) => [...prev, categoryResponse.data]);
+            console.log('✅ [ADMIN] Category created:', categoryResponse.data.id, 'requiresSizes:', categoryResponse.data.requiresSizes);
+          }
+        } catch (err: any) {
+          console.error('❌ [ADMIN] Error creating category:', err);
+          alert(`Չհաջողվեց ստեղծել կատեգորիա: ${err.message || 'Unknown error'}`);
+          setLoading(false);
+          return;
+        }
+      }
 
       // Validate that at least one variant exists
       if (formData.variants.length === 0) {
@@ -906,8 +985,8 @@ function AddProductPageContent() {
         slug: formData.slug,
         subtitle: formData.subtitle || undefined,
         descriptionHtml: formData.descriptionHtml || undefined,
-        brandId: formData.brandId || undefined,
-        primaryCategoryId: formData.primaryCategoryId || undefined,
+        brandId: finalBrandId || undefined,
+        primaryCategoryId: finalPrimaryCategoryId || undefined,
         categoryIds: formData.categoryIds.length > 0 ? formData.categoryIds : undefined,
         published: formData.published,
         locale: 'en',
@@ -1077,68 +1156,175 @@ function AddProductPageContent() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Primary Category
                   </label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.primaryCategoryId}
-                    onChange={(e) => {
-                      const newCategoryId = e.target.value;
-                      const newIsSizeRequired = categories.find((cat) => cat.id === newCategoryId) 
-                        ? (() => {
-                            const selectedCategory = categories.find((cat) => cat.id === newCategoryId);
-                            if (!selectedCategory) return false;
-                            const sizeRequiredSlugs = ['clothing', 'odezhda', 'hagust', 'apparel', 'fashion', 'shoes', 'koshik', 'obuv'];
-                            const sizeRequiredTitles = ['clothing', 'одежда', 'հագուստ', 'apparel', 'fashion', 'shoes', 'կոշիկ', 'обувь'];
-                            return (
-                              sizeRequiredSlugs.some((slug) => selectedCategory.slug.toLowerCase().includes(slug)) ||
-                              sizeRequiredTitles.some((title) => selectedCategory.title.toLowerCase().includes(title))
-                            );
-                          })()
-                        : false;
-                      
-                      setFormData((prev) => {
-                        // If switching from size-required category to non-size-required, clear sizes
-                        const wasSizeRequired = isClothingCategory();
-                        if (wasSizeRequired && !newIsSizeRequired) {
-                          return {
-                            ...prev,
-                            primaryCategoryId: newCategoryId,
-                            variants: prev.variants.map((v) => ({
-                              ...v,
-                              sizes: [],
-                              sizeStocks: {},
-                              size: '',
-                            })),
-                          };
-                        }
-                        return { ...prev, primaryCategoryId: newCategoryId };
-                      });
-                    }}
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.title}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="radio"
+                        id="select-category"
+                        name="category-mode"
+                        checked={!useNewCategory}
+                        onChange={() => {
+                          setUseNewCategory(false);
+                          setNewCategoryName('');
+                          setNewCategoryRequiresSizes(false);
+                          setFormData((prev) => ({ ...prev, primaryCategoryId: '' }));
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="select-category" className="text-sm text-gray-700">
+                        Select existing category
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="radio"
+                        id="new-category"
+                        name="category-mode"
+                        checked={useNewCategory}
+                        onChange={() => {
+                          setUseNewCategory(true);
+                          setNewCategoryRequiresSizes(false);
+                          setFormData((prev) => ({ ...prev, primaryCategoryId: '' }));
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="new-category" className="text-sm text-gray-700">
+                        Add new category
+                      </label>
+                    </div>
+                    {!useNewCategory ? (
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.primaryCategoryId}
+                        onChange={(e) => {
+                          const newCategoryId = e.target.value;
+                          const selectedCategory = categories.find((cat) => cat.id === newCategoryId);
+                          const newIsSizeRequired = selectedCategory
+                            ? (selectedCategory.requiresSizes !== undefined 
+                                ? selectedCategory.requiresSizes 
+                                : (() => {
+                                    // Fallback: Check by slug or title
+                                    const sizeRequiredSlugs = ['clothing', 'odezhda', 'hagust', 'apparel', 'fashion', 'shoes', 'koshik', 'obuv'];
+                                    const sizeRequiredTitles = ['clothing', 'одежда', 'հագուստ', 'apparel', 'fashion', 'shoes', 'կոշիկ', 'обувь'];
+                                    return (
+                                      sizeRequiredSlugs.some((slug) => selectedCategory.slug.toLowerCase().includes(slug)) ||
+                                      sizeRequiredTitles.some((title) => selectedCategory.title.toLowerCase().includes(title))
+                                    );
+                                  })())
+                            : false;
+                          
+                          setFormData((prev) => {
+                            // If switching from size-required category to non-size-required, clear sizes
+                            const wasSizeRequired = isClothingCategory();
+                            if (wasSizeRequired && !newIsSizeRequired) {
+                              return {
+                                ...prev,
+                                primaryCategoryId: newCategoryId,
+                                variants: prev.variants.map((v) => ({
+                                  ...v,
+                                  sizes: [],
+                                  sizeStocks: {},
+                                  size: '',
+                                })),
+                              };
+                            }
+                            return { ...prev, primaryCategoryId: newCategoryId };
+                          });
+                        }}
+                      >
+                        <option value="">Select category</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.title}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-3">
+                        <Input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="Enter new category name"
+                          className="w-full"
+                        />
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newCategoryRequiresSizes}
+                            onChange={(e) => setNewCategoryRequiresSizes(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">
+                            This category requires sizes (e.g., clothing, shoes)
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Brand
                   </label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.brandId}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, brandId: e.target.value }))}
-                  >
-                    <option value="">Select brand</option>
-                    {brands.map((brand) => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="radio"
+                        id="select-brand"
+                        name="brand-mode"
+                        checked={!useNewBrand}
+                        onChange={() => {
+                          setUseNewBrand(false);
+                          setNewBrandName('');
+                          setFormData((prev) => ({ ...prev, brandId: '' }));
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="select-brand" className="text-sm text-gray-700">
+                        Select existing brand
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="radio"
+                        id="new-brand"
+                        name="brand-mode"
+                        checked={useNewBrand}
+                        onChange={() => {
+                          setUseNewBrand(true);
+                          setFormData((prev) => ({ ...prev, brandId: '' }));
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="new-brand" className="text-sm text-gray-700">
+                        Add new brand
+                      </label>
+                    </div>
+                    {!useNewBrand ? (
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.brandId}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, brandId: e.target.value }))}
+                      >
+                        <option value="">Select brand</option>
+                        {brands.map((brand) => (
+                          <option key={brand.id} value={brand.id}>
+                            {brand.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        type="text"
+                        value={newBrandName}
+                        onChange={(e) => setNewBrandName(e.target.value)}
+                        placeholder="Enter new brand name"
+                        className="w-full"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1247,205 +1433,6 @@ function AddProductPageContent() {
                 className="hidden"
                 onChange={handleUploadImages}
               />
-            </div>
-
-            {/* Attributes & Variations */}
-            <div>
-              <div className="flex flex-col gap-2 mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Attributes & Variations</h2>
-                <p className="text-sm text-gray-600">
-                  Manage product attributes (size, material, color, etc.) and define their available values.
-                  Newly created attributes become available immediately for all products.
-                </p>
-                {attributeMessage && (
-                  <div
-                    className={`rounded-md border px-3 py-2 text-sm ${
-                      attributeMessage.type === 'success'
-                        ? 'border-green-200 bg-green-50 text-green-700'
-                        : 'border-red-200 bg-red-50 text-red-700'
-                    }`}
-                  >
-                    {attributeMessage.text}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Existing attributes</h3>
-                  {attributes.length === 0 ? (
-                    <p className="text-sm text-gray-500">
-                      No attributes yet. Create one using the form below.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {attributes.map((attribute) => (
-                        <div
-                          key={attribute.id}
-                          className="rounded-md border border-gray-100 bg-gray-50 p-4"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div>
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {attribute.name}{' '}
-                                  <span className="text-xs font-normal text-gray-500">
-                                    ({attribute.key})
-                                  </span>
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  Type: {attribute.type} • Filterable:{' '}
-                                  {attribute.filterable ? 'Yes' : 'No'}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {attribute.values.length === 0 ? (
-                                <span className="text-xs text-gray-500">No variations yet</span>
-                              ) : (
-                                attribute.values.map((value) => (
-                                  <span
-                                    key={value.id}
-                                    className="rounded-full bg-white px-2 py-1 text-xs text-gray-700 border border-gray-200"
-                                  >
-                                    {value.label}
-                                  </span>
-                                ))
-                              )}
-                            </div>
-                            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                              <Input
-                                placeholder="Add variation (e.g. Large, Cotton)"
-                                value={variationInputs[attribute.id] || ''}
-                                onChange={(e) =>
-                                  setVariationInputs((prev) => ({
-                                    ...prev,
-                                    [attribute.id]: e.target.value,
-                                  }))
-                                }
-                                className="flex-1"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => handleAddVariation(attribute.id)}
-                                disabled={addingVariationId === attribute.id}
-                              >
-                                {addingVariationId === attribute.id ? 'Adding...' : 'Add Variation'}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Create new attribute</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Attribute Name *
-                      </label>
-                      <Input
-                        value={newAttributeForm.name}
-                        onChange={(e) => handleNewAttributeNameChange(e.target.value)}
-                        placeholder="e.g. Size"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Attribute Key *
-                      </label>
-                      <Input
-                        value={newAttributeForm.key}
-                        onChange={(e) =>
-                          setNewAttributeForm((prev) => ({ ...prev, key: e.target.value }))
-                        }
-                        placeholder="size"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                      <select
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={newAttributeForm.type}
-                        onChange={(e) =>
-                          setNewAttributeForm((prev) => ({ ...prev, type: e.target.value }))
-                        }
-                      >
-                        <option value="select">Select</option>
-                        <option value="text">Text</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="attribute-filterable"
-                        type="checkbox"
-                        checked={newAttributeForm.filterable}
-                        onChange={(e) =>
-                          setNewAttributeForm((prev) => ({
-                            ...prev,
-                            filterable: e.target.checked,
-                          }))
-                        }
-                        className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                      />
-                      <label htmlFor="attribute-filterable" className="text-sm text-gray-700">
-                        Filterable
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Variations</p>
-                    <div className="space-y-2">
-                      {newAttributeForm.values.map((value, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Input
-                            value={value}
-                            onChange={(e) => handleAttributeValueFieldChange(index, e.target.value)}
-                            placeholder="Value label (e.g. Small, Cotton)"
-                          />
-                          {newAttributeForm.values.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              onClick={() => removeAttributeValueField(index)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={addAttributeValueField}
-                      className="mt-2"
-                    >
-                      + Add Variation
-                    </Button>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      onClick={handleCreateAttribute}
-                      disabled={creatingAttribute}
-                    >
-                      {creatingAttribute ? 'Creating...' : 'Create Attribute'}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={resetNewAttributeForm}>
-                      Reset
-                    </Button>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Product Labels */}
@@ -1721,9 +1708,44 @@ function AddProductPageContent() {
                         {/* Color - Multiple selection with stock per color */}
                         {getColorAttribute() && (
                           <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Colors (Select multiple) *
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Colors (Select multiple) *
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="text"
+                                  value={newColorName}
+                                  onChange={(e) => setNewColorName(e.target.value)}
+                                  placeholder="Add new color"
+                                  className="w-32 h-8 text-sm"
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddColor();
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={handleAddColor}
+                                  disabled={addingColor || !newColorName.trim()}
+                                  className="h-8 text-xs px-2"
+                                >
+                                  {addingColor ? 'Adding...' : '+ Add'}
+                                </Button>
+                              </div>
+                            </div>
+                            {colorMessage && (
+                              <div className={`mb-2 text-xs px-2 py-1 rounded ${
+                                colorMessage.type === 'success' 
+                                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                                  : 'bg-red-50 text-red-700 border border-red-200'
+                              }`}>
+                                {colorMessage.text}
+                              </div>
+                            )}
                             <div className="space-y-3">
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border border-gray-300 rounded-md bg-white max-h-48 overflow-y-auto">
                                 {getColorAttribute()?.values.map((val) => {
@@ -1785,9 +1807,44 @@ function AddProductPageContent() {
                         {/* Size - Multiple selection with stock per size */}
                         {isClothingCategory() && getSizeAttribute() && (
                           <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Sizes (Select multiple) *
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Sizes (Select multiple) *
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="text"
+                                  value={newSizeName}
+                                  onChange={(e) => setNewSizeName(e.target.value)}
+                                  placeholder="Add new size"
+                                  className="w-32 h-8 text-sm"
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddSize();
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={handleAddSize}
+                                  disabled={addingSize || !newSizeName.trim()}
+                                  className="h-8 text-xs px-2"
+                                >
+                                  {addingSize ? 'Adding...' : '+ Add'}
+                                </Button>
+                              </div>
+                            </div>
+                            {sizeMessage && (
+                              <div className={`mb-2 text-xs px-2 py-1 rounded ${
+                                sizeMessage.type === 'success' 
+                                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                                  : 'bg-red-50 text-red-700 border border-red-200'
+                              }`}>
+                                {sizeMessage.text}
+                              </div>
+                            )}
                             <div className="space-y-3">
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border border-gray-300 rounded-md bg-white max-h-48 overflow-y-auto">
                                 {getSizeAttribute()?.values.map((val) => {

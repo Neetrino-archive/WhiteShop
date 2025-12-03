@@ -36,6 +36,10 @@ const categorySchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  requiresSizes: {
+    type: Boolean,
+    default: false,
+  },
   media: {
     type: [mongoose.Schema.Types.Mixed],
     default: [],
