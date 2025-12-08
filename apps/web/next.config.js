@@ -9,9 +9,6 @@ const nextConfig = {
     typescript: {
     ignoreBuildErrors: true, // TypeScript errors won't stop build
   },
-  eslint: {
-    ignoreDuringBuilds: true, // ESLint errors won't stop build
-  },
   images: {
     remotePatterns: [
       {
@@ -76,12 +73,10 @@ const nextConfig = {
     return config;
   },
   // Turbopack configuration for monorepo
-  // Set root to the directory where package.json is located (where Next.js is installed)
-  // On server: /var/www/WhiteShop/web
-  // On local: apps/web
-  // Use process.cwd() to get the current working directory where npm is run from
+  // Required when webpack config is present - Next.js 16 requires explicit turbopack config
+  // Set root to project root where Next.js is installed in node_modules (monorepo workspace)
   turbopack: {
-    root: process.cwd(),
+    root: path.resolve(__dirname, '../..'),
   },
 };
 
