@@ -11,8 +11,7 @@
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "start": "turbo run start",
-    "migrate:mongo-to-postgres": "tsx scripts/migrate-mongo-to-postgres.ts",
-          "postinstall": "prisma generate --schema=apps/packages/db/prisma/schema.prisma"
+    "migrate:mongo-to-postgres": "tsx scripts/migrate-mongo-to-postgres.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3"
