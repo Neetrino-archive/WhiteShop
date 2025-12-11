@@ -151,6 +151,7 @@ class UsersService {
       await db.user.update({
         where: { id: userId },
         data: { passwordHash: newPasswordHash },
+        select: { id: true },
       });
 
       return { success: true };

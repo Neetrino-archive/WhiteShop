@@ -102,6 +102,14 @@ class AuthService {
           locale: "en",
           roles: ["customer"],
         },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+          roles: true,
+        },
       });
       console.log("✅ [AUTH] User created successfully");
     } catch (error: any) {

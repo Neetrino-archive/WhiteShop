@@ -161,6 +161,7 @@ class AdminService {
         deletedAt: new Date(),
         blocked: true,
       },
+      select: { id: true },
     });
 
     return { success: true };
