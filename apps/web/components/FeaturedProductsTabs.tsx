@@ -115,9 +115,13 @@ export function FeaturedProductsTabs() {
     <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
-        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+        <h2 className="text-3xl font-bold text-gray-900 text-center">
           Featured Products
         </h2>
+        <p className="mt-3 mb-8 text-base text-gray-600 text-center">
+         
+          Selected products: updated every week
+        </p>
 
         {/* Tabs Navigation */}
         <div className="flex justify-center items-center gap-6 md:gap-8 mb-8 flex-wrap">

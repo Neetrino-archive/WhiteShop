@@ -18,9 +18,7 @@ export default function PrivacyPage() {
           <p className="text-gray-600">
             Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the site.
           </p>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Information We Collect</h2>
           <div className="space-y-4">
             <div>
@@ -42,9 +40,7 @@ export default function PrivacyPage() {
               </p>
             </div>
           </div>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">How We Use Your Information</h2>
           <p className="text-gray-600 mb-2">We use the information we collect to:</p>
           <ul className="list-disc list-inside text-gray-600 space-y-1 ml-4">
@@ -56,9 +52,7 @@ export default function PrivacyPage() {
             <li>Detect and prevent fraud</li>
             <li>Comply with legal obligations</li>
           </ul>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Information Sharing and Disclosure</h2>
           <p className="text-gray-600 mb-4">
             We do not sell, trade, or rent your personal information to third parties. We may share your information only in the following circumstances:
@@ -69,16 +63,12 @@ export default function PrivacyPage() {
             <li>In connection with a business transfer or merger</li>
             <li>With your explicit consent</li>
           </ul>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Data Security</h2>
           <p className="text-gray-600">
             We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet or electronic storage is 100% secure.
           </p>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Rights</h2>
           <p className="text-gray-600 mb-2">You have the right to:</p>
           <ul className="list-disc list-inside text-gray-600 space-y-1 ml-4">
@@ -89,9 +79,7 @@ export default function PrivacyPage() {
             <li>Request data portability</li>
             <li>Withdraw consent at any time</li>
           </ul>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Cookies</h2>
           <p className="text-gray-600 mb-4">
             We use cookies and similar tracking technologies to track activity on our website and hold certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.
@@ -100,9 +88,7 @@ export default function PrivacyPage() {
             For more information about our use of cookies, please see our{' '}
             <a href="/cookies" className="text-blue-600 hover:underline">Cookie Policy</a>.
           </p>
-        </Card>
 
-        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Contact Us</h2>
           <p className="text-gray-600">
             If you have questions about this Privacy Policy, please contact us at:{' '}

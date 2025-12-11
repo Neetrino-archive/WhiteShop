@@ -117,6 +117,22 @@ export function Footer() {
                   Cookie Policy
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/refund-policy"
+                  className="text-sm text-gray-300 hover:text-white transition-colors"
+                >
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/delivery-terms"
+                  className="text-sm text-gray-300 hover:text-white transition-colors"
+                >
+                  Delivery Terms
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -182,6 +182,8 @@
 - ✅ Products էջում ֆիլտրերի սանիտիզացում (colors/sizes)՝ placeholder արժեքները չեն զտում ապրանքները, առանց գույն/չափս ապրանքները ցուցադրվում են
 - ✅ Admin Orders/Users/Products էջերում ավելացվել են checkbox-եր և bulk delete UI (fallback per-item delete), աշխատում է լոկալ/պրոդ միջավայրի համար
 - ✅ Header-ում լեզվի/արժույթի selector-ի UI-ը բերվեց ներկայացված նկարի ոճին, ավելացվեց `[Header][LangCurrency]` logging ավելի պարզ debug-ի համար
+- ✅ Added Refund Policy and Delivery Terms pages and linked them in the footer
+- ✅ Added Home featured products subheading "Discover our top picks"
 
 ## Ամփոփում
 

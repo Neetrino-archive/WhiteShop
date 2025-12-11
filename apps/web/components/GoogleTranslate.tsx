@@ -18,8 +18,8 @@ const getLanguageIcon = (code: LanguageCode): React.ReactNode => {
       <Image
         src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Flag_of_the_United_Kingdom_%283-5%29.svg/1024px-Flag_of_the_United_Kingdom_%283-5%29.svg.png"
         alt="English"
-        width={30}
-        height={30}
+        width={25}
+        height={25}
         className="rounded"
         unoptimized
       />
@@ -28,8 +28,8 @@ const getLanguageIcon = (code: LanguageCode): React.ReactNode => {
       <Image
           src="https://janarmenia.com/uploads/0000/83/2022/04/28/anthem-armenia.jpg"
         alt="Armenian"
-        width={30}
-        height={30}
+        width={25}
+        height={25}
          className="rounded"
         unoptimized
       />
@@ -38,8 +38,8 @@ const getLanguageIcon = (code: LanguageCode): React.ReactNode => {
       <Image
         src="https://flagfactoryshop.com/image/cache/catalog/products/flags/national/mockups/russia_coa-600x400.jpg"
         alt="Russian"
-        width={30}
-        height={30}
+        width={25}
+        height={25}
          className="rounded"
         unoptimized
       />
@@ -48,8 +48,8 @@ const getLanguageIcon = (code: LanguageCode): React.ReactNode => {
       <Image
         src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRqHb4LNq5xqV85VxehTa7JFyB4SVIQqrWtA&s"
         alt="Georgian"
-        width={30}
-        height={30}
+        width={25}
+        height={25}
          className="rounded"
         unoptimized
       />
