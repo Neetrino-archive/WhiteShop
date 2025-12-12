@@ -49,11 +49,36 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
-const ProfileIcon = () => (
- <svg width="19" height="19" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+/**
+ * Profile icon for logged out state (outline style)
+ */
+const ProfileIconOutline = () => (
+  <svg width="19" height="19" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="10" cy="7" r="3.2" stroke="currentColor" strokeWidth="1.8" fill="none" />
     <path d="M5 17C5 14.5 7.5 12.5 10 12.5C12.5 12.5 15 14.5 15 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
   </svg>
+);
+
+/**
+ * Profile icon for logged in state (filled style with background)
+ */
+const ProfileIconFilled = () => (
+  <div className="relative w-[19px] h-[19px] flex items-center justify-center">
+    {/* Background circle */}
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full opacity-90 group-hover:opacity-100 transition-opacity duration-200 shadow-md"></div>
+    {/* Filled icon */}
+    <svg 
+      width="19" 
+      height="19" 
+      viewBox="0 0 20 20" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className="relative z-10"
+    >
+      <circle cx="10" cy="7" r="3.2" fill="white" />
+      <path d="M5 17C5 14.5 7.5 12.5 10 12.5C12.5 12.5 15 14.5 15 17" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  </div>
 );
 
 const WishlistIcon = () => (
@@ -780,9 +805,9 @@ export function Header() {
                   <>
                     <button
                       onClick={() => setShowUserMenu(!showUserMenu)}
-                      className="w-11 h-11 flex items-center justify-center text-gray-700 hover:text-gray-900 transition-colors duration-150 group"
+                      className="w-11 h-11 flex items-center justify-center transition-all duration-200 group"
                     >
-                      <ProfileIcon />
+                      <ProfileIconFilled />
                     </button>
                     {showUserMenu && (
                       <div className="absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-2xl border border-gray-200/80 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
@@ -822,7 +847,7 @@ export function Header() {
                   </>
                 ) : (
                   <Link href="/login" className="w-11 h-11 flex items-center justify-center text-gray-700 hover:text-gray-900 transition-colors duration-150 group">
-                    <ProfileIcon />
+                    <ProfileIconOutline />
                   </Link>
                 )}
               </div>
@@ -950,7 +975,7 @@ export function Header() {
                         className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 normal-case text-gray-800"
                       >
                         <span className="flex items-center gap-2">
-                          <ProfileIcon />
+                          <ProfileIconFilled />
                           Profile
                         </span>
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
