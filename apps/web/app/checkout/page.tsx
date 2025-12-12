@@ -527,8 +527,34 @@ export default function CheckoutPage() {
       isLoading, 
       showShippingModal,
       paymentMethod,
+      shippingMethod,
       cart: cart ? 'exists' : 'null'
     });
+    
+    // Validate shipping address if delivery is selected
+    if (shippingMethod === 'delivery') {
+      const formData = watch();
+      const hasShippingAddress = formData.shippingAddress && formData.shippingAddress.trim().length > 0;
+      const hasShippingCity = formData.shippingCity && formData.shippingCity.trim().length > 0;
+      const hasShippingPostalCode = formData.shippingPostalCode && formData.shippingPostalCode.trim().length > 0;
+      const hasShippingPhone = formData.shippingPhone && formData.shippingPhone.trim().length > 0;
+      
+      if (!hasShippingAddress || !hasShippingCity || !hasShippingPostalCode || !hasShippingPhone) {
+        console.log('[Checkout] Shipping address validation failed:', {
+          hasShippingAddress,
+          hasShippingCity,
+          hasShippingPostalCode,
+          hasShippingPhone
+        });
+        setError('Please fill in all shipping address fields');
+        // Scroll to shipping address section
+        const shippingSection = document.querySelector('[data-shipping-section]');
+        if (shippingSection) {
+          shippingSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+    }
     
     // If ArCa or Idram is selected, show card details modal first
     if (paymentMethod === 'arca' || paymentMethod === 'idram') {
@@ -781,25 +807,33 @@ export default function CheckoutPage() {
 
             {/* Shipping Address - Only show for delivery */}
             {shippingMethod === 'delivery' && (
-              <Card className="p-6">
+              <Card className="p-6" data-shipping-section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Shipping Address</h2>
-                {(errors.shippingAddress || errors.shippingCity || errors.shippingPostalCode || errors.shippingPhone) && (
+                {(error && error.includes('shipping address')) || (errors.shippingAddress || errors.shippingCity || errors.shippingPostalCode || errors.shippingPhone) ? (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-sm text-red-600">
-                      {errors.shippingAddress?.message || 
-                       errors.shippingCity?.message || 
-                       errors.shippingPostalCode?.message || 
-                       errors.shippingPhone?.message}
+                      {error && error.includes('shipping address') 
+                        ? error 
+                        : (errors.shippingAddress?.message || 
+                           errors.shippingCity?.message || 
+                           errors.shippingPostalCode?.message || 
+                           errors.shippingPhone?.message)}
                     </p>
                   </div>
-                )}
+                ) : null}
                 <div className="space-y-4">
                   <div>
                     <Input
                       label="Address"
                       type="text"
                       placeholder="Street address, apartment, suite, etc."
-                      {...register('shippingAddress')}
+                      {...register('shippingAddress', {
+                        onChange: () => {
+                          if (error && error.includes('shipping address')) {
+                            setError(null);
+                          }
+                        }
+                      })}
                       error={errors.shippingAddress?.message}
                       disabled={isSubmitting}
                     />
@@ -810,7 +844,13 @@ export default function CheckoutPage() {
                         label="City"
                         type="text"
                         placeholder="City"
-                        {...register('shippingCity')}
+                        {...register('shippingCity', {
+                          onChange: () => {
+                            if (error && error.includes('shipping address')) {
+                              setError(null);
+                            }
+                          }
+                        })}
                         error={errors.shippingCity?.message}
                         disabled={isSubmitting}
                       />
@@ -820,7 +860,13 @@ export default function CheckoutPage() {
                         label="Postal Code"
                         type="text"
                         placeholder="Postal code"
-                        {...register('shippingPostalCode')}
+                        {...register('shippingPostalCode', {
+                          onChange: () => {
+                            if (error && error.includes('shipping address')) {
+                              setError(null);
+                            }
+                          }
+                        })}
                         error={errors.shippingPostalCode?.message}
                         disabled={isSubmitting}
                       />
@@ -831,7 +877,13 @@ export default function CheckoutPage() {
                       label="Phone Number"
                       type="tel"
                       placeholder="+374XXXXXXXX"
-                      {...register('shippingPhone')}
+                      {...register('shippingPhone', {
+                        onChange: () => {
+                          if (error && error.includes('shipping address')) {
+                            setError(null);
+                          }
+                        }
+                      })}
                       error={errors.shippingPhone?.message}
                       disabled={isSubmitting}
                     />
