@@ -133,7 +133,8 @@ export default async function ProductsPage({ searchParams }: any) {
     compareAtPrice: p.compareAtPrice ?? p.originalPrice ?? null,
     image: p.image ?? null,
     inStock: p.inStock ?? true,      // ⭐ FIXED
-    brand: p.brand ?? null
+    brand: p.brand ?? null,
+    colors: p.colors ?? []           // ⭐ Add colors array
   }));
 
   // FILTERS

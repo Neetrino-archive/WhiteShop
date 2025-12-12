@@ -447,6 +447,17 @@ class ProductsService {
         ? variants.sort((a: { price: number }, b: { price: number }) => a.price - b.price)[0]
         : null;
 
+      // Get all unique colors from variants
+      const colorSet = new Set<string>();
+      variants.forEach((v: { options?: Array<{ attributeKey?: string | null; value?: string | null }> }) => {
+        const options = Array.isArray(v.options) ? v.options : [];
+        const colorOption = options.find((opt: { attributeKey?: string | null }) => opt.attributeKey === "color");
+        if (colorOption?.value) {
+          colorSet.add(colorOption.value.trim().toLowerCase());
+        }
+      });
+      const availableColors = Array.from(colorSet);
+
       const originalPrice = variant?.price || 0;
       let finalPrice = originalPrice;
       const productDiscount = product.discountPercent || 0;
@@ -515,6 +526,7 @@ class ProductsService {
           position: label.position,
           color: label.color,
         })) : [],
+        colors: availableColors, // Add available colors array
       };
     });
 
