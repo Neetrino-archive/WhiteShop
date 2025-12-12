@@ -216,6 +216,13 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
       return;
     }
 
+    // Validate product slug before making API call
+    if (!product.slug || product.slug.trim() === '' || product.slug.includes(' ')) {
+      console.error('❌ [PRODUCT CARD] Invalid product slug:', product.slug);
+      alert('Invalid product. Please refresh the page and try again.');
+      return;
+    }
+
     // Если пользователь не залогинен, используем localStorage для корзины
     if (!isLoggedIn) {
       setIsAddingToCart(true);
@@ -237,7 +244,9 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
           }>;
         }
 
-        const productDetails = await apiClient.get<ProductDetails>(`/api/v1/products/${product.slug}`);
+        // Encode slug to handle special characters
+        const encodedSlug = encodeURIComponent(product.slug.trim());
+        const productDetails = await apiClient.get<ProductDetails>(`/api/v1/products/${encodedSlug}`);
         
         if (!productDetails.variants || productDetails.variants.length === 0) {
           alert('No variants available');
@@ -286,10 +295,16 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
         
         localStorage.setItem(CART_KEY, JSON.stringify(cart));
         window.dispatchEvent(new Event('cart-updated'));
-      } catch (error) {
-        console.error('Error adding to guest cart:', error);
-        // Если не удалось добавить в localStorage, перенаправляем на login
-        router.push(`/login?redirect=/products`);
+      } catch (error: any) {
+        console.error('❌ [PRODUCT CARD] Error adding to guest cart:', error);
+        
+        // Check if error is about product not found
+        if (error?.message?.includes('does not exist') || error?.message?.includes('404') || error?.status === 404) {
+          alert('Product not found. Please refresh the page and try again.');
+        } else {
+          // Если не удалось добавить в localStorage, перенаправляем на login
+          router.push(`/login?redirect=/products`);
+        }
       } finally {
         setIsAddingToCart(false);
       }
@@ -311,7 +326,9 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
         }>;
       }
 
-      const productDetails = await apiClient.get<ProductDetails>(`/api/v1/products/${product.slug}`);
+      // Encode slug to handle special characters
+      const encodedSlug = encodeURIComponent(product.slug.trim());
+      const productDetails = await apiClient.get<ProductDetails>(`/api/v1/products/${encodedSlug}`);
 
       if (!productDetails.variants || productDetails.variants.length === 0) {
         alert('No variants available');
@@ -334,6 +351,13 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
     } catch (error: any) {
       console.error('❌ [PRODUCT CARD] Error adding to cart:', error);
       
+      // Check if error is about product not found
+      if (error?.message?.includes('does not exist') || error?.message?.includes('404') || error?.status === 404 || error?.statusCode === 404) {
+        alert('Product not found. Please refresh the page and try again.');
+        setIsAddingToCart(false);
+        return;
+      }
+      
       // Check if error is about insufficient stock
       if (error.response?.data?.detail?.includes('No more stock available') || 
           error.response?.data?.detail?.includes('exceeds available stock') ||
@@ -346,6 +370,9 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
       // Если ошибка авторизации, перенаправляем на login
       if (error.message?.includes('401') || error.message?.includes('Unauthorized') || error?.status === 401 || error?.statusCode === 401) {
         router.push(`/login?redirect=/products`);
+      } else {
+        // Generic error message
+        alert('Failed to add product to cart. Please try again.');
       }
     } finally {
       setIsAddingToCart(false);

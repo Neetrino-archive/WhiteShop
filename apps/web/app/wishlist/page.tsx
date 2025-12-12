@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -51,6 +51,8 @@ export default function WishlistPage() {
   const [language, setLanguage] = useState(getStoredLanguage());
   const [currency, setCurrency] = useState(getStoredCurrency());
   const [addingToCart, setAddingToCart] = useState<Set<string>>(new Set());
+  // Track if we updated locally to prevent unnecessary re-fetch
+  const isLocalUpdateRef = useRef(false);
 
   /**
    * Fetches wishlist products for provided ids and updates component state.
@@ -99,8 +101,16 @@ export default function WishlistPage() {
     setWishlistIds(ids);
     fetchWishlistProducts(ids);
 
-    // Listen for wishlist updates
+    // Listen for wishlist updates from other components (header, etc.)
+    // But don't re-fetch if we already updated locally
     const handleWishlistUpdate = () => {
+      // If we just updated locally, skip re-fetch to avoid page reload
+      if (isLocalUpdateRef.current) {
+        isLocalUpdateRef.current = false;
+        return;
+      }
+      
+      // Only re-fetch if update came from external source (another component)
       const updatedIds = getWishlist();
       setWishlistIds(updatedIds);
       fetchWishlistProducts(updatedIds);
@@ -126,10 +136,23 @@ export default function WishlistPage() {
 
   const handleRemove = (productId: string) => {
     console.info(`[Wishlist] Removing product ${productId} from wishlist UI`);
+    
+    // Mark as local update to prevent re-fetch in event handler
+    isLocalUpdateRef.current = true;
+    
+    // Optimistic update: remove from UI immediately (no loading state, no page reload)
     const updatedIds = wishlistIds.filter((id) => id !== productId);
+    const updatedProducts = products.filter((p) => p.id !== productId);
+    
+    // Update localStorage first
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(updatedIds));
+    
+    // Update state immediately (no page reload, no loading spinner)
     setWishlistIds(updatedIds);
-    setProducts(products.filter((p) => p.id !== productId));
+    setProducts(updatedProducts);
+    
+    // Dispatch event for other components (header, etc.) - but our handler won't re-fetch
+    // because isLocalUpdateRef.current is true
     window.dispatchEvent(new Event('wishlist-updated'));
   };
 

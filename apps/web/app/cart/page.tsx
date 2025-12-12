@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@shop/ui';
@@ -52,6 +52,8 @@ export default function CartPage() {
   const [currency, setCurrency] = useState(getStoredCurrency());
   const [language, setLanguage] = useState(getStoredLanguage());
   const [updatingItems, setUpdatingItems] = useState<Set<string>>(new Set());
+  // Track if we updated locally to prevent unnecessary re-fetch
+  const isLocalUpdateRef = useRef(false);
 
   useEffect(() => {
     fetchCart();
@@ -65,6 +67,13 @@ export default function CartPage() {
     };
 
     const handleCartUpdate = () => {
+      // If we just updated locally, skip re-fetch to avoid page reload
+      if (isLocalUpdateRef.current) {
+        isLocalUpdateRef.current = false;
+        return;
+      }
+      
+      // Only re-fetch if update came from external source (another component)
       fetchCart();
     };
 
@@ -239,6 +248,32 @@ export default function CartPage() {
   }
 
   async function handleRemoveItem(itemId: string) {
+    // Optimistic update: remove item from UI immediately
+    if (!cart) return;
+    
+    const itemToRemove = cart.items.find(item => item.id === itemId);
+    if (!itemToRemove) return;
+
+    // Mark as local update to prevent re-fetch in event handler
+    isLocalUpdateRef.current = true;
+
+    // Calculate new totals
+    const updatedItems = cart.items.filter(item => item.id !== itemId);
+    const newSubtotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
+    const newItemsCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Update UI immediately (optimistic update - no loading state, no page reload)
+    setCart({
+      ...cart,
+      items: updatedItems,
+      totals: {
+        ...cart.totals,
+        subtotal: newSubtotal,
+        total: newSubtotal + cart.totals.tax + cart.totals.shipping - cart.totals.discount,
+      },
+      itemsCount: newItemsCount,
+    });
+
     try {
       // Եթե օգտատերը գրանցված չէ, օգտագործում ենք localStorage
       if (!isLoggedIn) {
@@ -258,17 +293,22 @@ export default function CartPage() {
           );
           
           localStorage.setItem(CART_KEY, JSON.stringify(updatedCart));
+          // Dispatch event for other components (header, etc.) - but our handler won't re-fetch
+          // because isLocalUpdateRef.current is true
           window.dispatchEvent(new Event('cart-updated'));
-          fetchCart();
         }
         return;
       }
 
+      // For logged-in users, delete from API
       await apiClient.delete(`/api/v1/cart/items/${itemId}`);
-      fetchCart();
+      // Dispatch event for other components (header, etc.) - but our handler won't re-fetch
+      // because isLocalUpdateRef.current is true
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
       console.error('Error removing item:', error);
+      // Revert optimistic update on error
+      fetchCart();
     }
   }
 
@@ -280,19 +320,46 @@ export default function CartPage() {
 
     // Find the cart item to check stock
     const cartItem = cart?.items.find(item => item.id === itemId);
-    if (cartItem && cartItem.variant.stock !== undefined) {
+    if (!cartItem) return;
+
+    if (cartItem.variant.stock !== undefined) {
       if (quantity > cartItem.variant.stock) {
         alert(`Մատչելի քանակը ${cartItem.variant.stock} հատ է: Դուք չեք կարող ավելացնել ավելի շատ քանակ:`);
         return;
       }
     }
 
+    // Mark as local update to prevent re-fetch in event handler
+    isLocalUpdateRef.current = true;
+
+    // Optimistic update: update UI immediately (no loading state, no page reload)
+    if (cart) {
+      const updatedItems = cart.items.map(item => 
+        item.id === itemId 
+          ? { ...item, quantity, total: item.price * quantity }
+          : item
+      );
+      const newSubtotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
+      const newItemsCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+      setCart({
+        ...cart,
+        items: updatedItems,
+        totals: {
+          ...cart.totals,
+          subtotal: newSubtotal,
+          total: newSubtotal + cart.totals.tax + cart.totals.shipping - cart.totals.discount,
+        },
+        itemsCount: newItemsCount,
+      });
+    }
+
+    setUpdatingItems(prev => new Set(prev).add(itemId));
+
     try {
       // Եթե օգտատերը գրանցված չէ, օգտագործում ենք localStorage
       if (!isLoggedIn) {
         if (typeof window === 'undefined') return;
-
-        setUpdatingItems(prev => new Set(prev).add(itemId));
 
         const stored = localStorage.getItem(CART_KEY);
         const guestCart: Array<{ productId: string; productSlug?: string; variantId: string; quantity: number }> = stored ? JSON.parse(stored) : [];
@@ -309,8 +376,10 @@ export default function CartPage() {
           
           if (item) {
             // Check stock for guest cart
-            if (cartItem && cartItem.variant.stock !== undefined && quantity > cartItem.variant.stock) {
+            if (cartItem.variant.stock !== undefined && quantity > cartItem.variant.stock) {
               alert(`Մատչելի քանակը ${cartItem.variant.stock} հատ է: Դուք չեք կարող ավելացնել ավելի շատ քանակ:`);
+              // Revert optimistic update
+              fetchCart();
               setUpdatingItems(prev => {
                 const next = new Set(prev);
                 next.delete(itemId);
@@ -321,8 +390,9 @@ export default function CartPage() {
             
             item.quantity = quantity;
             localStorage.setItem(CART_KEY, JSON.stringify(guestCart));
+            // Dispatch event for other components (header, etc.) - but our handler won't re-fetch
+            // because isLocalUpdateRef.current is true
             window.dispatchEvent(new Event('cart-updated'));
-            fetchCart();
           }
         }
         
@@ -334,17 +404,20 @@ export default function CartPage() {
         return;
       }
 
-      setUpdatingItems(prev => new Set(prev).add(itemId));
-
+      // For logged-in users, update via API
       await apiClient.patch(
         `/api/v1/cart/items/${itemId}`,
         { quantity }
       );
 
-      fetchCart();
+      // Dispatch event for other components (header, etc.) - but our handler won't re-fetch
+      // because isLocalUpdateRef.current is true
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error: any) {
       console.error('Error updating quantity:', error);
+      // Revert optimistic update on error
+      fetchCart();
+      
       // Show user-friendly error message
       const errorMessage = error?.detail || error?.message || 'Չհաջողվեց թարմացնել քանակը';
       if (errorMessage.includes('stock') || errorMessage.includes('exceeds')) {

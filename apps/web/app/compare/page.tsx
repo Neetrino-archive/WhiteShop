@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { MouseEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -54,6 +54,8 @@ export default function ComparePage() {
   const [currency, setCurrency] = useState(getStoredCurrency());
   const [language, setLanguage] = useState(getStoredLanguage());
   const [addingToCart, setAddingToCart] = useState<Set<string>>(new Set());
+  // Track if we updated locally to prevent unnecessary re-fetch
+  const isLocalUpdateRef = useRef(false);
 
   const translateLabel = useCallback(
     (key: string, fallback?: string) => {
@@ -118,8 +120,16 @@ export default function ComparePage() {
     setCompareIds(ids);
     fetchCompareProducts(ids);
 
-    // Listen for compare updates
+    // Listen for compare updates from other components (header, etc.)
+    // But don't re-fetch if we already updated locally
     const handleCompareUpdate = () => {
+      // If we just updated locally, skip re-fetch to avoid page reload
+      if (isLocalUpdateRef.current) {
+        isLocalUpdateRef.current = false;
+        return;
+      }
+      
+      // Only re-fetch if update came from external source (another component)
       const updatedIds = getCompare();
       setCompareIds(updatedIds);
       fetchCompareProducts(updatedIds);
@@ -154,10 +164,23 @@ export default function ComparePage() {
     e.stopPropagation();
     
     console.info(`[Compare] Removing product ${productId} from compare UI`);
+    
+    // Mark as local update to prevent re-fetch in event handler
+    isLocalUpdateRef.current = true;
+    
+    // Optimistic update: remove from UI immediately (no loading state, no page reload)
     const updatedIds = compareIds.filter((id) => id !== productId);
+    const updatedProducts = products.filter((p) => p.id !== productId);
+    
+    // Update localStorage first
     localStorage.setItem(COMPARE_KEY, JSON.stringify(updatedIds));
+    
+    // Update state immediately (no page reload, no loading spinner)
     setCompareIds(updatedIds);
-    setProducts(products.filter((p) => p.id !== productId));
+    setProducts(updatedProducts);
+    
+    // Dispatch event for other components (header, etc.) - but our handler won't re-fetch
+    // because isLocalUpdateRef.current is true
     window.dispatchEvent(new Event('compare-updated'));
   };
 
