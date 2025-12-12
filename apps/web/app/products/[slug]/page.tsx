@@ -762,8 +762,7 @@ const handleCompareToggle = (e: MouseEvent) => {
                     aria-label="Zoom image"
                   >
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M2 2L6 6M14 6L18 2M2 18L6 14M14 14L18 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      <rect x="6" y="6" width="8" height="8" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                      <path d="M10 4V16M4 10H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </button>
                 </>

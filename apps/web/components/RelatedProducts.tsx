@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type MouseEvent } from 'react';
+import { useState, useEffect, useRef, type MouseEvent, type TouchEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -68,6 +68,10 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visibleCards, setVisibleCards] = useState(4);
   const [addingToCart, setAddingToCart] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchRelatedProducts = async () => {
@@ -77,7 +81,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
         
         // Build params - if no categorySlug, fetch all products
         const params: Record<string, string> = {
-          limit: '12', // Fetch more to ensure we have 4 after filtering
+          limit: '30', // Fetch more to ensure we have 10 after filtering
           lang: language,
         };
         
@@ -98,10 +102,10 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
         });
 
         console.log('[RelatedProducts] Received products:', response.data.length);
-        // Filter out current product and take exactly 4
+        // Filter out current product and take exactly 10
         const filtered = response.data.filter(p => p.id !== currentProductId);
         console.log('[RelatedProducts] After filtering current product:', filtered.length);
-        const finalProducts = filtered.slice(0, 4);
+        const finalProducts = filtered.slice(0, 10);
         console.log('[RelatedProducts] Final products to display:', finalProducts.length);
         setProducts(finalProducts);
       } catch (error) {
@@ -137,7 +141,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
 
   // Auto-rotate carousel
   useEffect(() => {
-    if (products.length <= visibleCards) return; // Don't auto-rotate if all products are visible
+    if (products.length <= visibleCards || isDragging) return; // Don't auto-rotate if all products are visible or if dragging
     
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => {
@@ -147,7 +151,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
     }, 5000); // Change every 5 seconds
 
     return () => clearInterval(interval);
-  }, [products.length, visibleCards]);
+  }, [products.length, visibleCards, isDragging]);
 
   // Adjust currentIndex when visibleCards changes
   useEffect(() => {
@@ -171,6 +175,81 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
   const goToNext = () => {
     setCurrentIndex((prevIndex) => {
       return prevIndex >= maxIndex ? 0 : prevIndex + 1;
+    });
+  };
+
+  /**
+   * Handle mouse down for dragging
+   */
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    if (!carouselRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - carouselRef.current.offsetLeft);
+    setScrollLeft(currentIndex);
+    e.preventDefault();
+  };
+
+  /**
+   * Handle mouse move for dragging
+   */
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !carouselRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - carouselRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
+    const cardWidth = 100 / visibleCards;
+    const newIndex = Math.round((scrollLeft - walk / (carouselRef.current.offsetWidth / 100)) / cardWidth);
+    const clampedIndex = Math.max(0, Math.min(maxIndex, newIndex));
+    setCurrentIndex(clampedIndex);
+  };
+
+  /**
+   * Handle mouse up/leave to stop dragging
+   */
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  /**
+   * Handle touch start for mobile dragging
+   */
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    if (!carouselRef.current) return;
+    setIsDragging(true);
+    setStartX(e.touches[0].pageX - carouselRef.current.offsetLeft);
+    setScrollLeft(currentIndex);
+  };
+
+  /**
+   * Handle touch move for mobile dragging
+   */
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    if (!isDragging || !carouselRef.current) return;
+    const x = e.touches[0].pageX - carouselRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    const cardWidth = 100 / visibleCards;
+    const newIndex = Math.round((scrollLeft - walk / (carouselRef.current.offsetWidth / 100)) / cardWidth);
+    const clampedIndex = Math.max(0, Math.min(maxIndex, newIndex));
+    setCurrentIndex(clampedIndex);
+  };
+
+  /**
+   * Handle touch end to stop dragging
+   */
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  /**
+   * Handle wheel scroll for horizontal scrolling
+   */
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY === 0) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 1 : -1;
+    setCurrentIndex((prevIndex) => {
+      const newIndex = prevIndex + delta;
+      return Math.max(0, Math.min(maxIndex, newIndex));
     });
   };
 
@@ -254,7 +333,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
         {loading ? (
           // Loading state
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
               <div key={i} className="animate-pulse">
                 <div className="aspect-square bg-gray-200 rounded-lg mb-4"></div>
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -271,11 +350,24 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
           // Products Carousel
           <div className="relative">
             {/* Carousel Container */}
-            <div className="relative overflow-hidden">
+            <div 
+              ref={carouselRef}
+              className="relative overflow-hidden cursor-grab active:cursor-grabbing select-none"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onWheel={handleWheel}
+            >
               <div
-                className="flex transition-transform duration-500 ease-in-out"
+                className="flex"
                 style={{
                   transform: `translateX(-${currentIndex * (100 / visibleCards)}%)`,
+                  pointerEvents: isDragging ? 'none' : 'auto',
+                  transition: isDragging ? 'none' : 'transform 0.5s ease-in-out',
                 }}
               >
                 {products.map((product) => {
@@ -295,6 +387,11 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
                         <Link
                           href={`/products/${product.slug}`}
                           className="block"
+                          onClick={(e) => {
+                            if (isDragging) {
+                              e.preventDefault();
+                            }
+                          }}
                         >
                           <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             {/* Product Image */}
@@ -380,7 +477,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
               <>
                 <button
                   onClick={goToPrevious}
-                  className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg transition-all z-20 cursor-pointer hover:scale-110"
+                  className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-12 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg transition-all z-20 cursor-pointer hover:scale-110"
                   aria-label="Previous products"
                 >
                   <svg
@@ -400,7 +497,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
 
                 <button
                   onClick={goToNext}
-                  className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg transition-all z-20 cursor-pointer hover:scale-110"
+                  className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-12 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg transition-all z-20 cursor-pointer hover:scale-110"
                   aria-label="Next products"
                 >
                   <svg
