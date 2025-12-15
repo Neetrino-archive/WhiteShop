@@ -18,12 +18,18 @@ interface PriceRange {
   min: number;
   max: number;
   stepSize?: number | null;
+  stepSizePerCurrency?: Partial<Record<CurrencyCode, number>> | null;
 }
 
 export function PriceFilter({ currentMinPrice, currentMaxPrice, category }: PriceFilterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [priceRange, setPriceRange] = useState<PriceRange>({ min: 0, max: 100000, stepSize: null });
+  const [priceRange, setPriceRange] = useState<PriceRange>({
+    min: 0,
+    max: 100000,
+    stepSize: null,
+    stepSizePerCurrency: null,
+  });
   const [minPrice, setMinPrice] = useState(currentMinPrice ? parseFloat(currentMinPrice) : 0);
   const [maxPrice, setMaxPrice] = useState(currentMaxPrice ? parseFloat(currentMaxPrice) : 100000);
   const [isDragging, setIsDragging] = useState<'min' | 'max' | null>(null);
@@ -86,6 +92,18 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category }: Pric
     }
   };
 
+  const resolveStepSize = (): number => {
+    const perCurrency = priceRange.stepSizePerCurrency || {};
+    const currencyStep = perCurrency[currency];
+    if (currencyStep && currencyStep > 0) {
+      return currencyStep;
+    }
+    if (priceRange.stepSize && priceRange.stepSize > 0) {
+      return priceRange.stepSize;
+    }
+    return 1;
+  };
+
   const getPercentage = (value: number) => {
     return ((value - priceRange.min) / (priceRange.max - priceRange.min)) * 100;
   };
@@ -100,7 +118,7 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category }: Pric
     const rect = sliderRef.current.getBoundingClientRect();
     const percentage = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     const value = priceRange.min + (percentage / 100) * (priceRange.max - priceRange.min);
-    const step = priceRange.stepSize || 1;
+    const step = resolveStepSize();
     const roundedValue = roundToStep(value, step);
 
     if (isDragging === 'min') {
@@ -210,8 +228,8 @@ export function PriceFilter({ currentMinPrice, currentMaxPrice, category }: Pric
             const rect = sliderRef.current?.getBoundingClientRect();
             if (!rect) return;
             const percentage = ((e.clientX - rect.left) / rect.width) * 100;
-            const value = priceRange.min + (percentage / 100) * (priceRange.max - priceRange.min);
-            const step = priceRange.stepSize || 1;
+    const value = priceRange.min + (percentage / 100) * (priceRange.max - priceRange.min);
+    const step = resolveStepSize();
             const roundedValue = roundToStep(value, step);
             
             const currentMin = typeof minPrice === 'number' && !isNaN(minPrice) ? minPrice : priceRange.min;

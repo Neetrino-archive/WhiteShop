@@ -4,7 +4,7 @@ import { adminService } from "@/lib/services/admin.service";
 
 /**
  * GET /api/v1/admin/settings/price-filter
- * Get price filter settings (minPrice, maxPrice, stepSize)
+ * Get price filter settings (minPrice, maxPrice, stepSize, stepSizePerCurrency)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * PUT /api/v1/admin/settings/price-filter
- * Update price filter settings (minPrice, maxPrice, stepSize)
+ * Update price filter settings (minPrice, maxPrice, stepSize, stepSizePerCurrency)
  */
 export async function PUT(req: NextRequest) {
   try {
@@ -105,6 +105,50 @@ export async function PUT(req: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Validate stepSizePerCurrency (optional map: { USD, AMD, RUB, GEL })
+    if (data.stepSizePerCurrency !== null && data.stepSizePerCurrency !== undefined) {
+      if (typeof data.stepSizePerCurrency !== 'object') {
+        return NextResponse.json(
+          {
+            type: "https://api.shop.am/problems/validation-error",
+            title: "Validation Error",
+            status: 400,
+            detail: "stepSizePerCurrency must be an object map of currency codes to positive numbers or null",
+            instance: req.url,
+          },
+          { status: 400 }
+        );
+      }
+
+      const allowedCurrencies = ['USD', 'AMD', 'RUB', 'GEL'];
+      for (const [code, value] of Object.entries(data.stepSizePerCurrency)) {
+        if (!allowedCurrencies.includes(code)) {
+          return NextResponse.json(
+            {
+              type: "https://api.shop.am/problems/validation-error",
+              title: "Validation Error",
+              status: 400,
+              detail: `Unsupported currency code in stepSizePerCurrency: ${code}`,
+              instance: req.url,
+            },
+            { status: 400 }
+          );
+        }
+        if (value !== null && value !== undefined && (typeof value !== 'number' || value <= 0)) {
+          return NextResponse.json(
+            {
+              type: "https://api.shop.am/problems/validation-error",
+              title: "Validation Error",
+              status: 400,
+              detail: `stepSizePerCurrency.${code} must be a valid positive number or null`,
+              instance: req.url,
+            },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     if (

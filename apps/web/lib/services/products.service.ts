@@ -1,5 +1,6 @@
 import { db } from "@white-shop/db";
 import { Prisma } from "@prisma/client";
+import { adminService } from "./admin.service";
 
 interface ProductFilters {
   category?: string;
@@ -818,10 +819,39 @@ class ProductsService {
     minPrice = minPrice === Infinity ? 0 : Math.floor(minPrice / 1000) * 1000;
     maxPrice = maxPrice === 0 ? 100000 : Math.ceil(maxPrice / 1000) * 1000;
 
+    // Load price filter settings to provide optional step sizes per currency
+    let stepSize: number | null = null;
+    let stepSizePerCurrency: {
+      USD?: number;
+      AMD?: number;
+      RUB?: number;
+      GEL?: number;
+    } | null = null;
+
+    try {
+      const settings = await adminService.getPriceFilterSettings();
+      stepSize = settings.stepSize ?? null;
+
+      if (settings.stepSizePerCurrency) {
+        // stepSizePerCurrency in settings is stored in display currency units.
+        // Here we pass them through to the frontend as-is; the slider logic
+        // will choose the appropriate value for the active currency.
+        stepSizePerCurrency = {
+          USD: settings.stepSizePerCurrency.USD ?? undefined,
+          AMD: settings.stepSizePerCurrency.AMD ?? undefined,
+          RUB: settings.stepSizePerCurrency.RUB ?? undefined,
+          GEL: settings.stepSizePerCurrency.GEL ?? undefined,
+        };
+      }
+    } catch (error) {
+      console.error('❌ [PRODUCTS SERVICE] Error loading price filter settings for price range:', error);
+    }
+
     return {
       min: minPrice,
       max: maxPrice,
-      stepSize: null,
+      stepSize,
+      stepSizePerCurrency,
     };
   }
 

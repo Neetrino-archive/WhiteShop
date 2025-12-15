@@ -1500,25 +1500,57 @@ class AdminService {
         minPrice: null,
         maxPrice: null,
         stepSize: null,
+        stepSizePerCurrency: null,
       };
     }
 
-    const value = setting.value as { minPrice?: number; maxPrice?: number; stepSize?: number };
+    const value = setting.value as {
+      minPrice?: number;
+      maxPrice?: number;
+      stepSize?: number;
+      stepSizePerCurrency?: {
+        USD?: number;
+        AMD?: number;
+        RUB?: number;
+        GEL?: number;
+      };
+    };
     console.log('✅ [ADMIN SERVICE] Price filter settings loaded:', value);
     return {
       minPrice: value.minPrice ?? null,
       maxPrice: value.maxPrice ?? null,
       stepSize: value.stepSize ?? null,
+      stepSizePerCurrency: value.stepSizePerCurrency ?? null,
     };
   }
 
   /**
    * Update price filter settings
    */
-  async updatePriceFilterSettings(data: { minPrice?: number | null; maxPrice?: number | null; stepSize?: number | null }) {
+  async updatePriceFilterSettings(data: {
+    minPrice?: number | null;
+    maxPrice?: number | null;
+    stepSize?: number | null;
+    stepSizePerCurrency?: {
+      USD?: number | null;
+      AMD?: number | null;
+      RUB?: number | null;
+      GEL?: number | null;
+    } | null;
+  }) {
     console.log('⚙️ [ADMIN SERVICE] Updating price filter settings...', data);
     
-    const value: { minPrice?: number; maxPrice?: number; stepSize?: number } = {};
+    const value: {
+      minPrice?: number;
+      maxPrice?: number;
+      stepSize?: number;
+      stepSizePerCurrency?: {
+        USD?: number;
+        AMD?: number;
+        RUB?: number;
+        GEL?: number;
+      };
+    } = {};
     
     if (data.minPrice !== null && data.minPrice !== undefined) {
       value.minPrice = data.minPrice;
@@ -1528,6 +1560,24 @@ class AdminService {
     }
     if (data.stepSize !== null && data.stepSize !== undefined) {
       value.stepSize = data.stepSize;
+    }
+    if (data.stepSizePerCurrency) {
+      const cleaned: { USD?: number; AMD?: number; RUB?: number; GEL?: number } = {};
+      if (data.stepSizePerCurrency.USD !== null && data.stepSizePerCurrency.USD !== undefined) {
+        cleaned.USD = data.stepSizePerCurrency.USD;
+      }
+      if (data.stepSizePerCurrency.AMD !== null && data.stepSizePerCurrency.AMD !== undefined) {
+        cleaned.AMD = data.stepSizePerCurrency.AMD;
+      }
+      if (data.stepSizePerCurrency.RUB !== null && data.stepSizePerCurrency.RUB !== undefined) {
+        cleaned.RUB = data.stepSizePerCurrency.RUB;
+      }
+      if (data.stepSizePerCurrency.GEL !== null && data.stepSizePerCurrency.GEL !== undefined) {
+        cleaned.GEL = data.stepSizePerCurrency.GEL;
+      }
+      if (Object.keys(cleaned).length > 0) {
+        value.stepSizePerCurrency = cleaned;
+      }
     }
 
     const setting = await db.settings.upsert({
@@ -1544,11 +1594,13 @@ class AdminService {
     });
 
     console.log('✅ [ADMIN SERVICE] Price filter settings updated:', setting);
+    const stored = setting.value as any;
     return {
       success: true,
-      minPrice: (setting.value as any).minPrice ?? null,
-      maxPrice: (setting.value as any).maxPrice ?? null,
-      stepSize: (setting.value as any).stepSize ?? null,
+      minPrice: stored.minPrice ?? null,
+      maxPrice: stored.maxPrice ?? null,
+      stepSize: stored.stepSize ?? null,
+      stepSizePerCurrency: stored.stepSizePerCurrency ?? null,
     };
   }
 

@@ -937,6 +937,9 @@ function AddProductPageContent() {
     try {
       console.log('📝 [ADMIN] Submitting product form:', formData);
 
+      // Collect success messages for newly created entities (brand/category)
+      const creationMessages: string[] = [];
+
       // Create new brand if provided
       let finalBrandId = formData.brandId;
       if (useNewBrand && newBrandName.trim()) {
@@ -951,6 +954,7 @@ function AddProductPageContent() {
             // Add to brands list for future use
             setBrands((prev) => [...prev, brandResponse.data]);
             console.log('✅ [ADMIN] Brand created:', brandResponse.data.id);
+            creationMessages.push(`Brand "${newBrandName.trim()}" successfully created`);
           }
         } catch (err: any) {
           console.error('❌ [ADMIN] Error creating brand:', err);
@@ -976,6 +980,9 @@ function AddProductPageContent() {
             // Add to categories list for future use
             setCategories((prev) => [...prev, categoryResponse.data]);
             console.log('✅ [ADMIN] Category created:', categoryResponse.data.id, 'requiresSizes:', categoryResponse.data.requiresSizes);
+            creationMessages.push(
+              `Category "${newCategoryName.trim()}" successfully created${newCategoryRequiresSizes ? ' (sizes required)' : ''}`
+            );
           }
         } catch (err: any) {
           console.error('❌ [ADMIN] Error creating category:', err);
@@ -1337,12 +1344,16 @@ function AddProductPageContent() {
         // Update existing product
         const product = await apiClient.put(`/api/v1/admin/products/${productId}`, payload);
         console.log('✅ [ADMIN] Product updated:', product);
-        alert('Ապրանքը հաջողությամբ թարմացվեց!');
+        const baseMessage = 'Ապրանքը հաջողությամբ թարմացվեց!';
+        const extra = creationMessages.length ? `\n\n${creationMessages.join('\n')}` : '';
+        alert(`${baseMessage}${extra}`);
       } else {
         // Create new product
         const product = await apiClient.post('/api/v1/admin/products', payload);
         console.log('✅ [ADMIN] Product created:', product);
-        alert('Ապրանքը հաջողությամբ ստեղծվեց!');
+        const baseMessage = 'Ապրանքը հաջողությամբ ստեղծվեց!';
+        const extra = creationMessages.length ? `\n\n${creationMessages.join('\n')}` : '';
+        alert(`${baseMessage}${extra}`);
       }
       
       router.push('/admin/products');
@@ -1411,7 +1422,7 @@ function AddProductPageContent() {
         </div>
 
         <Card className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-14">
             {/* Basic Information */}
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
