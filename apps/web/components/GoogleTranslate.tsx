@@ -374,7 +374,10 @@ export function GoogleTranslate() {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) { // Element node
             const el = node as HTMLElement;
-            const className = el.className || '';
+            // Convert className to string (it can be DOMTokenList or string)
+            const className = typeof el.className === 'string' 
+              ? el.className 
+              : String(el.className || '');
             const id = el.id || '';
             const tagName = el.tagName?.toLowerCase() || '';
             

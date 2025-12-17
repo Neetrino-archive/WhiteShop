@@ -34,6 +34,7 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
   const [sortBy, setSortBy] = useState<SortOption>('default');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileSortDropdownRef = useRef<HTMLDivElement>(null);
 
   // Derive current "show per page" value from URL or fallback to perPage prop
   const limitFromUrl = searchParams.get('limit');
@@ -65,7 +66,11 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isClickInsideDesktop = sortDropdownRef.current?.contains(target);
+      const isClickInsideMobile = mobileSortDropdownRef.current?.contains(target);
+      
+      if (!isClickInsideDesktop && !isClickInsideMobile) {
         setShowSortDropdown(false);
       }
     };
@@ -149,27 +154,83 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
           )}
         </div>
 
-        {/* Filters Button + View Mode Icons - On one line with space between */}
-        <div className="flex items-center justify-between">
-          {/* Mobile Filter Button - On the left */}
-          <button
-            type="button"
-            onClick={() => {
-              console.debug('[ProductsHeader] Opening mobile filters');
-              window.dispatchEvent(new Event(MOBILE_FILTERS_EVENT));
-            }}
-            className="sm:hidden flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filters</span>
-            {hasActiveFilters && (
-              <span className="ml-1 rounded-full bg-gray-900 px-1.5 py-0.5 text-xs font-semibold text-white">
-                {Object.keys(Object.fromEntries(searchParams.entries())).filter(key => 
-                  ['search', 'category', 'minPrice', 'maxPrice', 'colors', 'sizes', 'brand'].includes(key)
-                ).length}
-              </span>
-            )}
-          </button>
+        {/* Filters Button + Sort + Show + View Mode Icons - On one line */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Mobile: Filter Button + Sort Arrow + Show - On the left */}
+          <div className="sm:hidden flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                console.debug('[ProductsHeader] Opening mobile filters');
+                window.dispatchEvent(new Event(MOBILE_FILTERS_EVENT));
+              }}
+              className="flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Filters</span>
+              {hasActiveFilters && (
+                <span className="ml-1 rounded-full bg-gray-900 px-1.5 py-0.5 text-xs font-semibold text-white">
+                  {Object.keys(Object.fromEntries(searchParams.entries())).filter(key => 
+                    ['search', 'category', 'minPrice', 'maxPrice', 'colors', 'sizes', 'brand'].includes(key)
+                  ).length}
+                </span>
+              )}
+            </button>
+
+            {/* Mobile Sort Arrow */}
+            <div className="relative" ref={mobileSortDropdownRef}>
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className="flex items-center justify-center w-10 h-10 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-gray-700"
+                aria-label="Sort products"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`}
+                >
+                  <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {showSortDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 overflow-hidden">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleSortChange(option.value)}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                        sortBy === option.value
+                          ? 'bg-gray-100 text-gray-900 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Show selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600">Show</span>
+              <select
+                value={currentLimit}
+                onChange={(event) => handleLimitChange(parseInt(event.target.value, 10))}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+              >
+                {[10, 20, 50].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           
           {/* Desktop: Empty space on left when filters button is hidden */}
           <div className="hidden sm:block"></div>
@@ -231,29 +292,10 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
           </div>
         </div>
 
-        {/* Sort Controls + Show select */}
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end mt-2 sm:mt-0">
-          {/* Native select for mobile */}
-          <div className="sm:hidden">
-            <label htmlFor="products-sort" className="sr-only">
-              Sort products
-            </label>
-            <select
-              id="products-sort"
-              value={sortBy}
-              onChange={(event) => handleSortChange(event.target.value as SortOption)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
-            >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        {/* Desktop: Sort Controls + Show select */}
+        <div className="hidden sm:flex sm:items-center sm:justify-end sm:gap-3 sm:mt-2">
           {/* Desktop dropdown */}
-          <div className="relative hidden sm:block" ref={sortDropdownRef}>
+          <div className="relative" ref={sortDropdownRef}>
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-sm text-gray-700"
@@ -290,13 +332,13 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
             )}
           </div>
 
-          {/* Show (page size) selector */}
+          {/* Desktop Show (page size) selector */}
           <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-gray-600">Show</span>
+            <span className="text-sm text-gray-600">Show</span>
             <select
               value={currentLimit}
               onChange={(event) => handleLimitChange(parseInt(event.target.value, 10))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs sm:text-sm text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
             >
               {[10, 20, 50].map((value) => (
                 <option key={value} value={value}>
