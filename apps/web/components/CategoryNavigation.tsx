@@ -59,10 +59,10 @@ function getCategoryIcon(categoryTitle: string, categorySlug: string, isActive: 
   // ALL category - grey circle
   if (title === 'all' || slug === 'all') {
     return (
-      <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
+      <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all ${
         isActive ? 'bg-gray-300' : 'bg-gray-200'
       }`}>
-        <span className="text-sm font-bold text-gray-900">ALL</span>
+        <span className="text-xs sm:text-sm font-bold text-gray-900">ALL</span>
       </div>
     );
   }
@@ -70,10 +70,10 @@ function getCategoryIcon(categoryTitle: string, categorySlug: string, isActive: 
   // NEW category - green circle
   if (title.includes('new') || slug.includes('new')) {
     return (
-      <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
+      <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all ${
         isActive ? 'bg-green-200' : 'bg-green-100'
       }`}>
-        <span className="text-sm font-bold text-green-700">NEW</span>
+        <span className="text-xs sm:text-sm font-bold text-green-700">NEW</span>
       </div>
     );
   }
@@ -81,17 +81,17 @@ function getCategoryIcon(categoryTitle: string, categorySlug: string, isActive: 
   // SALE category - red circle
   if (title.includes('sale') || slug.includes('sale')) {
     return (
-      <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
+      <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all ${
         isActive ? 'bg-red-200' : 'bg-red-100'
       }`}>
-        <span className="text-sm font-bold text-red-700">SALE</span>
+        <span className="text-xs sm:text-sm font-bold text-red-700">SALE</span>
       </div>
     );
   }
 
   // Default - white circle (will be filled with product image if available)
   return (
-    <div className="w-20 h-20 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center overflow-hidden">
       {/* Product image will be inserted here if available */}
     </div>
   );
@@ -247,13 +247,13 @@ function CategoryNavigationContent() {
 
   if (loading) {
     return (
-      <div className="bg-white border-b border-gray-200 py-4 w-full">
-        <div className="mx-auto px-0 sm:px-4 md:px-6 lg:max-w-7xl lg:px-8">
-          <div className="flex items-center gap-6 overflow-x-auto">
+      <div className="bg-white border-b border-gray-200 py-3 sm:py-4 md:py-6 w-full">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-2 min-w-[100px]">
-                <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse"></div>
-                <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div key={i} className="flex flex-col items-center gap-1 sm:gap-2 min-w-[80px] sm:min-w-[100px]">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-200 animate-pulse"></div>
+                <div className="w-16 sm:w-20 h-3 sm:h-4 bg-gray-200 rounded animate-pulse"></div>
               </div>
             ))}
           </div>
@@ -296,8 +296,8 @@ function CategoryNavigationContent() {
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 py-6 w-full">
-      <div className="mx-auto px-0 sm:px-4 md:px-6 lg:max-w-7xl lg:px-8">
+    <div className="bg-white border-b border-gray-200 py-3 sm:py-4 md:py-6 w-full">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
         <div className="relative">
           {/* Левая стрелка - всегда видна, но неактивна когда нельзя прокрутить */}
           <button
@@ -322,7 +322,7 @@ function CategoryNavigationContent() {
           </button>
           <div
             ref={scrollContainerRef}
-            className="flex items-center gap-6 md:gap-8 overflow-x-auto scrollbar-hide pb-2 pl-4 sm:pl-4 md:pl-6"
+            className="flex items-center gap-4 sm:gap-6 md:gap-8 overflow-x-auto scrollbar-hide pb-1 sm:pb-2 pl-2 sm:pl-4 md:pl-6"
             style={{ scrollBehavior: 'smooth' }}
           >
           {displayCategories.map((category) => {
@@ -351,14 +351,14 @@ function CategoryNavigationContent() {
                   e.preventDefault();
                   handleCategoryClick(category.slug === 'all' ? null : category.slug);
                 }}
-                className="flex flex-col items-center gap-2 min-w-[100px] group cursor-pointer transition-all duration-200 hover:opacity-80"
+                className="flex flex-col items-center gap-1 sm:gap-2 min-w-[80px] sm:min-w-[100px] group cursor-pointer transition-all duration-200 hover:opacity-80"
               >
                 {/* Category Icon/Image */}
                 <div className="relative">
                   {(slug === 'all' || title.toLowerCase().includes('new') || title.toLowerCase().includes('sale')) ? (
                     getCategoryIcon(title, slug, isActive)
                   ) : (
-                    <div className={`w-20 h-20 rounded-full bg-white border-2 flex items-center justify-center overflow-hidden transition-all ${
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border-2 flex items-center justify-center overflow-hidden transition-all ${
                       isActive ? 'border-gray-400 shadow-md' : 'border-gray-200'
                     }`}>
                       {product?.image ? (
@@ -372,7 +372,7 @@ function CategoryNavigationContent() {
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
                         </div>
@@ -382,7 +382,7 @@ function CategoryNavigationContent() {
                 </div>
                 
                 {/* Category Label */}
-                <span className={`text-xs text-center font-medium transition-colors ${
+                <span className={`text-[10px] sm:text-xs text-center font-medium leading-tight transition-colors ${
                   isActive 
                     ? 'text-gray-900 underline' 
                     : 'text-gray-700'
@@ -423,13 +423,13 @@ function CategoryNavigationContent() {
 export function CategoryNavigation() {
   return (
     <Suspense fallback={
-      <div className="bg-white border-b border-gray-200 py-4 w-full">
-        <div className="mx-auto px-0 sm:px-4 md:px-6 lg:max-w-7xl lg:px-8">
-          <div className="flex items-center gap-6 overflow-x-auto">
+      <div className="bg-white border-b border-gray-200 py-3 sm:py-4 md:py-6 w-full">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-2 min-w-[100px]">
-                <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse"></div>
-                <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div key={i} className="flex flex-col items-center gap-1 sm:gap-2 min-w-[80px] sm:min-w-[100px]">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-200 animate-pulse"></div>
+                <div className="w-16 sm:w-20 h-3 sm:h-4 bg-gray-200 rounded animate-pulse"></div>
               </div>
             ))}
           </div>

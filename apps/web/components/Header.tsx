@@ -643,30 +643,30 @@ export function Header() {
       </div>
 
       {/* Main Header */}
-      <div className="max-w-7xl mx-auto pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8">
-        <div className="flex flex-wrap items-center gap-4 py-4 md:py-3">
+      <div className="max-w-7xl mx-auto pl-2 sm:pl-4 md:pl-6 lg:pl-8 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 py-4 md:py-3">
           {/* Logo + Mobile Menu */}
           <div className="flex w-full items-center justify-between md:w-auto md:justify-start">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                className="md:hidden w-10 h-10 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                className="md:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
                 aria-label="Open navigation menu"
                 aria-expanded={mobileMenuOpen}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
               </button>
               <Link href="/" className="flex items-center flex-shrink-0 group">
-                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent group-hover:from-gray-800 group-hover:to-gray-600 transition-all duration-300">
+                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent group-hover:from-gray-800 group-hover:to-gray-600 transition-all duration-300">
                   White-Shop
                 </span>
               </Link>
             </div>
             {/* Mobile Currency and Language - on same line as logo */}
-            <div className="flex items-center gap-2 md:hidden">
+            <div className="flex items-center gap-1 sm:gap-2 md:hidden">
               {/* Currency Switcher */}
               <div className="relative" ref={mobileCurrencyRef}>
                 <button
@@ -674,10 +674,10 @@ export function Header() {
                   onClick={() => {
                     setShowMobileCurrency(!showMobileCurrency);
                   }}
-                  className="flex h-10 items-center justify-center gap-2 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm transition-colors cursor-pointer"
+                  className="flex h-9 sm:h-10 items-center justify-center gap-1 sm:gap-2 bg-transparent md:bg-white px-2 sm:px-3 text-xs sm:text-sm font-medium text-gray-800 shadow-none md:shadow-sm transition-colors cursor-pointer"
                 >
-                  <span className="text-base font-semibold leading-none">{selectedCurrencyInfo.symbol}</span>
-                  <span className="text-sm font-medium leading-none">{selectedCurrency}</span>
+                  <span className="text-sm sm:text-base font-semibold leading-none">{selectedCurrencyInfo.symbol}</span>
+                  <span className="text-xs sm:text-sm font-medium leading-none">{selectedCurrency}</span>
                   <ChevronDownIcon />
                 </button>
                 {showMobileCurrency && (
@@ -705,7 +705,7 @@ export function Header() {
                 )}
               </div>
               {/* Language Switcher */}
-              <div className="flex h-10 items-center justify-center">
+              <div className="flex h-9 sm:h-10 items-center justify-center">
                 <GoogleTranslate />
               </div>
             </div>

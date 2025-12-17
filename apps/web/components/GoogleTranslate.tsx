@@ -323,12 +323,12 @@ export function GoogleTranslate() {
           type="button"
           onClick={() => setShowMenu(!showMenu)}
           aria-expanded={showMenu}
-          className="flex items-center gap-2 bg-white px-3 py-2 text-gray-800 transition-colors"
+          className="flex items-center gap-1 sm:gap-2 bg-transparent md:bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-gray-800 transition-colors"
         >
-          <span className="flex h-8 w-8 items-center justify-center text-lg leading-none">
+          <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center text-base sm:text-lg leading-none">
             {getLanguageIcon(currentLang)}
           </span>
-          <span className="text-sm font-medium">{LANGUAGES[currentLang].name}</span>
+          <span className="text-xs sm:text-sm font-medium">{LANGUAGES[currentLang].name}</span>
           <ChevronDownIcon />
         </button>
         {showMenu && (
