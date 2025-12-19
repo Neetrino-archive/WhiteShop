@@ -1457,27 +1457,40 @@ function ProfilePageContent() {
                         </div>
                       </Card>
 
-                      {/* Shipping Address (moved under Order Summary) */}
-                      {selectedOrder.shippingAddress && (
-                        <Card className="p-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Shipping Address</h3>
-                          <div className="text-gray-600">
-                            {selectedOrder.shippingAddress.firstName && selectedOrder.shippingAddress.lastName && (
-                              <p>{selectedOrder.shippingAddress.firstName} {selectedOrder.shippingAddress.lastName}</p>
-                            )}
-                            {selectedOrder.shippingAddress.addressLine1 && <p>{selectedOrder.shippingAddress.addressLine1}</p>}
-                            {selectedOrder.shippingAddress.addressLine2 && <p>{selectedOrder.shippingAddress.addressLine2}</p>}
-                            {selectedOrder.shippingAddress.city && (
-                              <p>
-                                {selectedOrder.shippingAddress.city}
-                                {selectedOrder.shippingAddress.postalCode && `, ${selectedOrder.shippingAddress.postalCode}`}
-                              </p>
-                            )}
-                            {selectedOrder.shippingAddress.countryCode && <p>{selectedOrder.shippingAddress.countryCode}</p>}
-                            {selectedOrder.shippingAddress.phone && <p className="mt-2">Phone: {selectedOrder.shippingAddress.phone}</p>}
+                      {/* Shipping Method */}
+                      <Card className="p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Shipping Method</h3>
+                        <div className="text-gray-700 space-y-3">
+                          <div>
+                            <span className="font-medium">Method: </span>
+                            <span className="capitalize">
+                              {selectedOrder.shippingMethod === 'delivery' ? 'Delivery' : 
+                               selectedOrder.shippingMethod === 'pickup' ? 'Pickup' : 
+                               selectedOrder.shippingMethod || 'Not specified'}
+                            </span>
                           </div>
-                        </Card>
-                      )}
+                          {selectedOrder.shippingMethod === 'delivery' && selectedOrder.shippingAddress && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <p className="font-medium text-gray-900 mb-2">Delivery Address:</p>
+                              <div className="text-gray-600">
+                                {selectedOrder.shippingAddress.firstName && selectedOrder.shippingAddress.lastName && (
+                                  <p>{selectedOrder.shippingAddress.firstName} {selectedOrder.shippingAddress.lastName}</p>
+                                )}
+                                {selectedOrder.shippingAddress.addressLine1 && <p>{selectedOrder.shippingAddress.addressLine1}</p>}
+                                {selectedOrder.shippingAddress.addressLine2 && <p>{selectedOrder.shippingAddress.addressLine2}</p>}
+                                {selectedOrder.shippingAddress.city && (
+                                  <p>
+                                    {selectedOrder.shippingAddress.city}
+                                    {selectedOrder.shippingAddress.postalCode && `, ${selectedOrder.shippingAddress.postalCode}`}
+                                  </p>
+                                )}
+                                {selectedOrder.shippingAddress.countryCode && <p>{selectedOrder.shippingAddress.countryCode}</p>}
+                                {selectedOrder.shippingAddress.phone && <p className="mt-2">Phone: {selectedOrder.shippingAddress.phone}</p>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
                     </div>
                   </div>
                 )}
