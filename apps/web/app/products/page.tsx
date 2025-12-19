@@ -29,6 +29,13 @@ interface Product {
     id: string;
     name: string;
   } | null;
+  labels?: Array<{
+    id: string;
+    type: 'text' | 'percentage';
+    value: string;
+    position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    color: string | null;
+  }>;
 }
 
 interface ProductsResponse {
@@ -141,7 +148,8 @@ export default async function ProductsPage({ searchParams }: any) {
     image: p.image ?? null,
     inStock: p.inStock ?? true,      // ⭐ FIXED
     brand: p.brand ?? null,
-    colors: p.colors ?? []           // ⭐ Add colors array
+    colors: p.colors ?? [],          // ⭐ Add colors array
+    labels: p.labels ?? []            // ⭐ Add labels array (includes "Out of Stock" label)
   }));
 
   // FILTERS

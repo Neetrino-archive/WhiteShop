@@ -207,47 +207,58 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
   }, [slug, router]);
 
+  // Fetch product function - defined outside useEffect to be accessible
+  const fetchProduct = useCallback(async () => {
+    if (!slug || RESERVED_ROUTES.includes(slug.toLowerCase())) return;
+    
+    try {
+      setLoading(true);
+      const currentLang = getStoredLanguage();
+      const data = await apiClient.get<Product>(`/api/v1/products/${slug}`, {
+        params: { lang: currentLang }
+      });
+      setProduct(data);
+      setCurrentImageIndex(0);
+      setThumbnailStartIndex(0);
+      
+      if (data.variants && data.variants.length > 0) {
+        let initialVariant = data.variants[0];
+        if (variantIdFromUrl) {
+          const variantById = data.variants.find(v => v.id === variantIdFromUrl || v.id.endsWith(variantIdFromUrl));
+          const variantByIndex = data.variants[parseInt(variantIdFromUrl) - 1];
+          initialVariant = variantById || variantByIndex || data.variants[0];
+        }
+        setSelectedVariant(initialVariant);
+        const colorOption = initialVariant.options?.find(opt => opt.key === 'color');
+        if (colorOption) setSelectedColor(colorOption.value);
+        const sizeOption = initialVariant.options?.find(opt => opt.key === 'size');
+        if (sizeOption) setSelectedSize(sizeOption.value);
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [slug, variantIdFromUrl]);
+
   useEffect(() => {
     if (!slug || RESERVED_ROUTES.includes(slug.toLowerCase())) return;
 
-    async function fetchProduct() {
-      try {
-        setLoading(true);
-        const data = await apiClient.get<Product>(`/api/v1/products/${slug}`);
-        setProduct(data);
-        setCurrentImageIndex(0);
-        setThumbnailStartIndex(0);
-        
-        if (data.variants && data.variants.length > 0) {
-          let initialVariant = data.variants[0];
-          if (variantIdFromUrl) {
-            const variantById = data.variants.find(v => v.id === variantIdFromUrl || v.id.endsWith(variantIdFromUrl));
-            const variantByIndex = data.variants[parseInt(variantIdFromUrl) - 1];
-            initialVariant = variantById || variantByIndex || data.variants[0];
-          }
-          setSelectedVariant(initialVariant);
-          const colorOption = initialVariant.options?.find(opt => opt.key === 'color');
-          if (colorOption) setSelectedColor(colorOption.value);
-          const sizeOption = initialVariant.options?.find(opt => opt.key === 'size');
-          if (sizeOption) setSelectedSize(sizeOption.value);
-        }
-      } catch (error) {
-        console.error('Error fetching product:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchProduct();
 
     const handleCurrencyUpdate = () => setCurrency(getStoredCurrency());
-    const handleLanguageUpdate = () => setLanguage(getStoredLanguage());
+    const handleLanguageUpdate = () => {
+      setLanguage(getStoredLanguage());
+      // Refetch product when language changes to update labels
+      fetchProduct();
+    };
     window.addEventListener('currency-updated', handleCurrencyUpdate);
     window.addEventListener('language-updated', handleLanguageUpdate);
     return () => {
       window.removeEventListener('currency-updated', handleCurrencyUpdate);
       window.removeEventListener('language-updated', handleLanguageUpdate);
     };
-  }, [slug, variantIdFromUrl, router]);
+  }, [slug, variantIdFromUrl, router, fetchProduct]);
 
   useEffect(() => {
     if (!product) return;
@@ -688,7 +699,9 @@ export default function ProductPage({ params }: ProductPageProps) {
         </div>
       )}
 
-      <ProductReviews productId={product.id} />
+      <div className="mt-24">
+        <ProductReviews productId={product.id} />
+      </div>
       <div className="mt-16">
         <RelatedProducts categorySlug={product.categories?.[0]?.slug} currentProductId={product.id} />
       </div>
