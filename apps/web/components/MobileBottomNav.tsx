@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Home, Filter, UserRound, Store } from 'lucide-react';
+import { Home, UserRound, Store } from 'lucide-react';
 import { getCompareCount, getWishlistCount } from '../lib/storageCounts';
-import { MOBILE_FILTERS_EVENT } from '../lib/events';
 import { CartIcon } from './icons/CartIcon';
 
 interface MobileNavItem {
@@ -71,15 +70,6 @@ export function MobileBottomNav() {
         visible: true,
       },
       { label: 'My account', href: '/profile', icon: UserRound, visible: true },
-      { 
-        label: 'Filters', 
-        icon: Filter, 
-        visible: isProductsPage,
-        action: () => {
-          console.debug('[MobileBottomNav] dispatching filters event');
-          window.dispatchEvent(new Event(MOBILE_FILTERS_EVENT));
-        },
-      },
     ],
     [isProductsPage]
   );

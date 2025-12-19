@@ -286,45 +286,89 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
 
       {/* Mobile: Stacked layout */}
       <div className="sm:hidden flex flex-col gap-4">
-        {/* Top: All Products Title + Clear Filters */}
+        {/* Top: All Products Title + Show dropdown */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-900"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 4L4 12M4 4L12 12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span>Clear filters</span>
-              </button>
-            )}
-            
-            <h1 className="text-lg font-bold text-gray-900">
-              All products ({total})
-            </h1>
+          <h1 className="text-lg font-bold text-gray-900">
+            All products ({total})
+          </h1>
+          
+          {/* Show dropdown - Top right */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600">Show</span>
+            <select
+              value={currentLimit}
+              onChange={(event) => handleLimitChange(parseInt(event.target.value, 10))}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            >
+              {[10, 20, 50, 100].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Bottom: Controls */}
+        {/* Bottom: Filters button + View Mode Icons + Sort */}
         <div className="flex items-center justify-between gap-2">
-          {/* Left: Sort + Show */}
+          {/* Left: Filters button */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('mobile:filters-toggle'))}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <line x1="3" y1="5" x2="17" y2="5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <line x1="3" y1="15" x2="17" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span>Filters</span>
+          </button>
+
+          {/* Right: View Mode Icons + Sort */}
           <div className="flex items-center gap-2">
-            {/* Mobile Sort */}
+            {/* View Mode Icons */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`rounded-lg p-2 transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                aria-label="List view"
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="3" y1="5" x2="17" y2="5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="3" y1="15" x2="17" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleViewModeChange('grid-2')}
+                className={`rounded-lg p-2 transition-all ${
+                  viewMode === 'grid-2'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                }`}
+                aria-label="Grid view 2x2"
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
+                  <rect x="11" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
+                  <rect x="2" y="11" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
+                  <rect x="11" y="11" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
+                </svg>
+              </button>
+            </div>
+
+            {/* Sort icon */}
             <div className="relative" ref={mobileSortDropdownRef}>
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
@@ -334,17 +378,19 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
                 <svg
                   width="16"
                   height="16"
-                  viewBox="0 0 12 12"
+                  viewBox="0 0 20 20"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`}
                 >
-                  <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Up arrow pointing up (left side) */}
+                  <path d="M7 8L10 5L13 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  {/* Down arrow pointing down (right side) */}
+                  <path d="M7 12L10 15L13 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 </svg>
               </button>
 
               {showSortDropdown && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 overflow-hidden">
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 overflow-hidden">
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}
@@ -361,57 +407,6 @@ function ProductsHeaderContent({ total, perPage }: ProductsHeaderProps) {
                 </div>
               )}
             </div>
-
-            {/* Mobile Show selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-600">Show</span>
-              <select
-                value={currentLimit}
-                onChange={(event) => handleLimitChange(parseInt(event.target.value, 10))}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              >
-                {[10, 20, 50, 100].map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Right: View Mode Icons */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleViewModeChange('list')}
-              className={`rounded-lg p-2 transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-400 hover:text-gray-600'
-              }`}
-              aria-label="List view"
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="3" y1="5" x2="17" y2="5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="3" y1="15" x2="17" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-            <button
-              onClick={() => handleViewModeChange('grid-2')}
-              className={`rounded-lg p-2 transition-all ${
-                viewMode === 'grid-2'
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-              }`}
-              aria-label="Grid view 2x2"
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
-                <rect x="11" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
-                <rect x="2" y="11" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
-                <rect x="11" y="11" width="7" height="7" stroke="currentColor" strokeWidth="1.5" fill={viewMode === 'grid-2' ? 'currentColor' : 'none'} />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
