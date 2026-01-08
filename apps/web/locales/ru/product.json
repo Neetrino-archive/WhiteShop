@@ -1,0 +1,27 @@
+{
+  "details_title": "Детали товара",
+  "related_products_title": "Похожие товары",
+  "reviews_title": "Отзывы",
+  "specifications_title": "Характеристики",
+  "description_title": "Описание",
+  "color": "Цвет",
+  "size": "Размер",
+  "quantity": "Количество",
+  "addToCart": "Добавить в корзину",
+  "outOfStock": "Нет в наличии",
+  "selectColor": "Пожалуйста, выберите цвет",
+  "selectSize": "Пожалуйста, выберите размер",
+  "selectColorAndSize": "Пожалуйста, выберите размер и цвет",
+  "selectOptions": "Выберите опции",
+  "adding": "Добавление...",
+  "addedToCart": "Добавлено в корзину",
+  "addedToWishlist": "Добавлено в избранное",
+  "removedFromWishlist": "Удалено из избранного",
+  "addedToCompare": "Добавлено к сравнению",
+  "removedFromCompare": "Удалено из сравнения",
+  "compareListFull": "Список сравнения заполнен",
+  "errorAddingToCart": "Ошибка при добавлении в корзину",
+  "pcs": "шт",
+  "outOfStockLabel": "Нет в наличии"
+}
+

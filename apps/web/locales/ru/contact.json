@@ -1,0 +1,30 @@
+{
+  "callToUs": {
+    "title": "Позвоните нам:",
+    "description": "Мы доступны 24/7, 7 дней в неделю."
+  },
+  "writeToUs": {
+    "title": "Напишите нам:",
+    "description": "Заполните нашу форму, и мы свяжемся с вами в течение 24 часов.",
+    "emailLabel": "Email:"
+  },
+  "headquarter": {
+    "title": "Главный офис:",
+    "hours": {
+      "weekdays": "Понедельник - Пятница: 9:00-20:00",
+      "saturday": "Суббота: 11:00 - 15:00"
+    }
+  },
+  "form": {
+    "name": "Имя *",
+    "namePlaceholder": "Ваше имя",
+    "email": "E-mail *",
+    "emailPlaceholder": "your@email.com",
+    "subject": "Тема *",
+    "subjectPlaceholder": "О чем это?",
+    "message": "Сообщение",
+    "messagePlaceholder": "Ваше сообщение...",
+    "submit": "Отправить"
+  }
+}
+

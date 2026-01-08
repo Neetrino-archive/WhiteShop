@@ -1,0 +1,22 @@
+{
+  "title": "Добро пожаловать",
+  "subtitle": "Войдите в свой аккаунт, чтобы продолжить",
+  "form": {
+    "emailOrPhone": "Email или Телефон",
+    "emailOrPhonePlaceholder": "your@email.com или +7 XXX XXX XX XX",
+    "password": "Пароль",
+    "passwordPlaceholder": "••••••••",
+    "rememberMe": "Запомнить меня",
+    "forgotPassword": "Забыли пароль?",
+    "submit": "Войти",
+    "submitting": "Вход...",
+    "noAccount": "Нет аккаунта?",
+    "signUp": "Зарегистрироваться"
+  },
+  "errors": {
+    "emailOrPhoneRequired": "Пожалуйста, введите ваш email или номер телефона",
+    "passwordRequired": "Пожалуйста, введите ваш пароль",
+    "loginFailed": "Ошибка входа. Пожалуйста, попробуйте снова."
+  }
+}
+
