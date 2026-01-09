@@ -166,7 +166,7 @@ function AddProductPageContent() {
     title: '',
     slug: '',
     descriptionHtml: '',
-    brandId: '',
+    brandIds: [] as string[], // Changed to array for multi-select
     primaryCategoryId: '',
     categoryIds: [] as string[],
     published: false,
@@ -177,6 +177,8 @@ function AddProductPageContent() {
     variants: [] as Variant[],
     labels: [] as ProductLabel[],
   });
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const colorImageFileInputRef = useRef<HTMLInputElement | null>(null);
   const mainProductImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -283,6 +285,40 @@ function AddProductPageContent() {
     };
     fetchData();
   }, []);
+
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (categoriesExpanded && !target.closest('[data-category-dropdown]')) {
+        setCategoriesExpanded(false);
+      }
+    };
+
+    if (categoriesExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [categoriesExpanded]);
+
+  // Close brand dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (brandsExpanded && !target.closest('[data-brand-dropdown]')) {
+        setBrandsExpanded(false);
+      }
+    };
+
+    if (brandsExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [brandsExpanded]);
 
   // Load product data if in edit mode
   useEffect(() => {
@@ -645,11 +681,16 @@ function AddProductPageContent() {
           const mainProductImage = (product as any).mainProductImage 
             || (normalizedMedia.length > 0 ? normalizedMedia[0] : '');
 
+          // Extract brandIds - convert single brandId to array for multi-select UI
+          // Note: Database currently supports single brandId, but UI allows multi-select
+          // We use the first brand for now, but UI is ready for future multi-brand support
+          const brandIds = product.brandId ? [product.brandId] : [];
+
           setFormData({
             title: product.title || '',
             slug: product.slug || '',
             descriptionHtml: product.descriptionHtml || '',
-            brandId: product.brandId || '',
+            brandIds: brandIds,
             primaryCategoryId: product.primaryCategoryId || '',
             categoryIds: product.categoryIds || [],
             published: product.published || false,
@@ -1667,8 +1708,8 @@ function AddProductPageContent() {
       // Collect success messages for newly created entities (brand/category)
       const creationMessages: string[] = [];
 
-      // Create new brand if provided
-      let finalBrandId = formData.brandId;
+      // Create new brand if provided and add to brandIds
+      let finalBrandIds = [...formData.brandIds];
       if (useNewBrand && newBrandName.trim()) {
         try {
           console.log('🏷️ [ADMIN] Creating new brand:', newBrandName);
@@ -1677,7 +1718,10 @@ function AddProductPageContent() {
             locale: 'en',
           });
           if (brandResponse.data) {
-            finalBrandId = brandResponse.data.id;
+            // Add new brand to brandIds if not already present
+            if (!finalBrandIds.includes(brandResponse.data.id)) {
+              finalBrandIds.push(brandResponse.data.id);
+            }
             // Add to brands list for future use
             setBrands((prev) => [...prev, brandResponse.data]);
             console.log('✅ [ADMIN] Brand created:', brandResponse.data.id);
@@ -2051,11 +2095,13 @@ function AddProductPageContent() {
       const attributeIds = Array.from(attributeIdsSet);
 
       // Prepare payload
+      // Note: Database supports single brandId, so we use the first selected brand
+      // For multiple brands, we would need to update the schema to support brandIds array
       const payload: any = {
         title: formData.title,
         slug: formData.slug,
         descriptionHtml: formData.descriptionHtml || undefined,
-        brandId: finalBrandId || undefined,
+        brandId: finalBrandIds.length > 0 ? finalBrandIds[0] : undefined,
         primaryCategoryId: finalPrimaryCategoryId || undefined,
         categoryIds: formData.categoryIds.length > 0 ? formData.categoryIds : undefined,
         published: formData.published,
@@ -2293,7 +2339,7 @@ function AddProductPageContent() {
             <h1 className="text-3xl font-bold text-gray-900">{isEditMode ? 'Edit Product' : 'Add New Product'}</h1>
           </div>
 
-          <Card className="p-6">
+          <Card className="p-6 pb-24 sm:pb-24">
           <form onSubmit={handleSubmit} className="space-y-14">
             {/* Basic Information */}
             <div>
@@ -2417,13 +2463,14 @@ function AddProductPageContent() {
               </div>
             </div>
 
-            {/* Categories & Brand */}
+            {/* Categories & Brands */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Categories & Brand</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Categories & Brands</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Categories - Multi-select */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Primary Category
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Categories <span className="text-gray-500 font-normal">(Select multiple)</span>
                   </label>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 mb-2">
@@ -2436,12 +2483,11 @@ function AddProductPageContent() {
                           setUseNewCategory(false);
                           setNewCategoryName('');
                           setNewCategoryRequiresSizes(false);
-                          setFormData((prev) => ({ ...prev, primaryCategoryId: '' }));
                         }}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <label htmlFor="select-category" className="text-sm text-gray-700">
-                        Select existing category
+                        Select existing categories
                       </label>
                     </div>
                     <div className="flex items-center gap-2 mb-2">
@@ -2453,7 +2499,6 @@ function AddProductPageContent() {
                         onChange={() => {
                           setUseNewCategory(true);
                           setNewCategoryRequiresSizes(false);
-                          setFormData((prev) => ({ ...prev, primaryCategoryId: '' }));
                         }}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -2462,52 +2507,94 @@ function AddProductPageContent() {
                       </label>
                     </div>
                     {!useNewCategory ? (
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={formData.primaryCategoryId}
-                        onChange={(e) => {
-                          const newCategoryId = e.target.value;
-                          const selectedCategory = categories.find((cat) => cat.id === newCategoryId);
-                          const newIsSizeRequired = selectedCategory
-                            ? (selectedCategory.requiresSizes !== undefined 
-                                ? selectedCategory.requiresSizes 
-                                : (() => {
-                                    // Fallback: Check by slug or title
-                                    const sizeRequiredSlugs = ['clothing', 'odezhda', 'hagust', 'apparel', 'fashion', 'shoes', 'koshik', 'obuv'];
-                                    const sizeRequiredTitles = ['clothing', 'одежда', 'հագուստ', 'apparel', 'fashion', 'shoes', 'կոշիկ', 'обувь'];
-                                    return (
-                                      sizeRequiredSlugs.some((slug) => selectedCategory.slug.toLowerCase().includes(slug)) ||
-                                      sizeRequiredTitles.some((title) => selectedCategory.title.toLowerCase().includes(title))
-                                    );
-                                  })())
-                            : false;
-                          
-                          setFormData((prev) => {
-                            // If switching from size-required category to non-size-required, clear sizes
-                            const wasSizeRequired = isClothingCategory();
-                            if (wasSizeRequired && !newIsSizeRequired) {
-                              return {
-                                ...prev,
-                                primaryCategoryId: newCategoryId,
-                                variants: prev.variants.map((v) => ({
-                                  ...v,
-                                  sizes: [],
-                                  sizeStocks: {},
-                                  size: '',
-                                })),
-                              };
-                            }
-                            return { ...prev, primaryCategoryId: newCategoryId };
-                          });
-                        }}
-                      >
-                        <option value="">Select category</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.title}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative" data-category-dropdown>
+                        <button
+                          type="button"
+                          onClick={() => setCategoriesExpanded(!categoriesExpanded)}
+                          className="w-full px-3 py-2 text-left border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm flex items-center justify-between"
+                        >
+                          <span className="text-gray-700">
+                            {formData.categoryIds.length === 0
+                              ? 'Select categories'
+                              : `${formData.categoryIds.length} ${formData.categoryIds.length === 1 ? 'category' : 'categories'} selected`}
+                          </span>
+                          <svg
+                            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                              categoriesExpanded ? 'transform rotate-180' : ''
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {categoriesExpanded && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div className="p-2">
+                              <div className="space-y-1">
+                                {categories.map((category) => (
+                                  <label
+                                    key={category.id}
+                                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={formData.categoryIds.includes(category.id)}
+                                      onChange={(e) => {
+                                        const newCategoryIds = e.target.checked
+                                          ? [...formData.categoryIds, category.id]
+                                          : formData.categoryIds.filter((id) => id !== category.id);
+                                        
+                                        // Set primary category if it's the first one
+                                        const newPrimaryCategoryId = newCategoryIds.length > 0 ? newCategoryIds[0] : '';
+                                        
+                                        const selectedCategory = categories.find((cat) => cat.id === category.id);
+                                        const newIsSizeRequired = selectedCategory
+                                          ? (selectedCategory.requiresSizes !== undefined 
+                                              ? selectedCategory.requiresSizes 
+                                              : (() => {
+                                                  const sizeRequiredSlugs = ['clothing', 'odezhda', 'hagust', 'apparel', 'fashion', 'shoes', 'koshik', 'obuv'];
+                                                  const sizeRequiredTitles = ['clothing', 'одежда', 'հագուստ', 'apparel', 'fashion', 'shoes', 'կոշիկ', 'обувь'];
+                                                  return (
+                                                    sizeRequiredSlugs.some((slug) => selectedCategory.slug.toLowerCase().includes(slug)) ||
+                                                    sizeRequiredTitles.some((title) => selectedCategory.title.toLowerCase().includes(title))
+                                                  );
+                                                })())
+                                          : false;
+                                        
+                                        setFormData((prev) => {
+                                          const wasSizeRequired = isClothingCategory();
+                                          if (wasSizeRequired && !newIsSizeRequired && newCategoryIds.length === 0) {
+                                            return {
+                                              ...prev,
+                                              categoryIds: newCategoryIds,
+                                              primaryCategoryId: newPrimaryCategoryId,
+                                              variants: prev.variants.map((v) => ({
+                                                ...v,
+                                                sizes: [],
+                                                sizeStocks: {},
+                                                size: '',
+                                              })),
+                                            };
+                                          }
+                                          return {
+                                            ...prev,
+                                            categoryIds: newCategoryIds,
+                                            primaryCategoryId: newPrimaryCategoryId,
+                                          };
+                                        });
+                                      }}
+                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{category.title}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="space-y-3">
                         <Input
@@ -2533,9 +2620,10 @@ function AddProductPageContent() {
                   </div>
                 </div>
 
+                {/* Brands - Multi-select */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Brand
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Brands <span className="text-gray-500 font-normal">(Select multiple)</span>
                   </label>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 mb-2">
@@ -2547,12 +2635,11 @@ function AddProductPageContent() {
                         onChange={() => {
                           setUseNewBrand(false);
                           setNewBrandName('');
-                          setFormData((prev) => ({ ...prev, brandId: '' }));
                         }}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <label htmlFor="select-brand" className="text-sm text-gray-700">
-                        Select existing brand
+                        Select existing brands
                       </label>
                     </div>
                     <div className="flex items-center gap-2 mb-2">
@@ -2563,7 +2650,6 @@ function AddProductPageContent() {
                         checked={useNewBrand}
                         onChange={() => {
                           setUseNewBrand(true);
-                          setFormData((prev) => ({ ...prev, brandId: '' }));
                         }}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -2572,18 +2658,56 @@ function AddProductPageContent() {
                       </label>
                     </div>
                     {!useNewBrand ? (
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={formData.brandId}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, brandId: e.target.value }))}
-                      >
-                        <option value="">Select brand</option>
-                        {brands.map((brand) => (
-                          <option key={brand.id} value={brand.id}>
-                            {brand.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative" data-brand-dropdown>
+                        <button
+                          type="button"
+                          onClick={() => setBrandsExpanded(!brandsExpanded)}
+                          className="w-full px-3 py-2 text-left border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm flex items-center justify-between"
+                        >
+                          <span className="text-gray-700">
+                            {formData.brandIds.length === 0
+                              ? 'Select brands'
+                              : `${formData.brandIds.length} ${formData.brandIds.length === 1 ? 'brand' : 'brands'} selected`}
+                          </span>
+                          <svg
+                            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                              brandsExpanded ? 'transform rotate-180' : ''
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {brandsExpanded && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div className="p-2">
+                              <div className="space-y-1">
+                                {brands.map((brand) => (
+                                  <label
+                                    key={brand.id}
+                                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={formData.brandIds.includes(brand.id)}
+                                      onChange={(e) => {
+                                        const newBrandIds = e.target.checked
+                                          ? [...formData.brandIds, brand.id]
+                                          : formData.brandIds.filter((id) => id !== brand.id);
+                                        setFormData((prev) => ({ ...prev, brandIds: newBrandIds }));
+                                      }}
+                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{brand.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <Input
                         type="text"
@@ -3899,15 +4023,6 @@ function AddProductPageContent() {
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={formData.published}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, published: e.target.checked }))}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Publish immediately</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
                     checked={formData.featured}
                     onChange={(e) => setFormData((prev) => ({ ...prev, featured: e.target.checked }))}
                     className="mr-2"
@@ -3920,24 +4035,27 @@ function AddProductPageContent() {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Product' : 'Create Product')}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => router.push('/admin')}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
+            {/* Actions - Sticky */}
+            <div className="sticky bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg -mx-6 -mb-6 px-6 py-4 mt-8 backdrop-blur-sm bg-white/95">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-full">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={loading}
+                  className="flex-1 w-full sm:w-auto order-2 sm:order-1"
+                >
+                  {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Product' : 'Create Product')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => router.push('/admin')}
+                  disabled={loading}
+                  className="w-full sm:w-auto order-1 sm:order-2"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
             {/* Hidden input for color image uploads */}
             <input
