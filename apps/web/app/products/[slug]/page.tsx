@@ -873,9 +873,18 @@ export default function ProductPage({ params }: ProductPageProps) {
             </h1>
             <div className="mb-6">
               <div className="flex flex-col gap-1">
-                <p className="text-3xl font-bold text-gray-900">{formatPrice(price, currency)}</p>
+                {/* Discounted price with discount percentage */}
+                <div className="flex items-center gap-2">
+                  <p className="text-3xl font-bold text-gray-900">{formatPrice(price, currency)}</p>
+                  {discountPercent && discountPercent > 0 && (
+                    <span className="text-lg font-semibold text-blue-600">
+                      -{discountPercent}%
+                    </span>
+                  )}
+                </div>
+                {/* Original price below discounted price - full width, not inline */}
                 {(originalPrice || (compareAtPrice && compareAtPrice > price)) && (
-                  <p className="text-xl text-gray-500 line-through decoration-gray-400">
+                  <p className="text-xl text-gray-500 line-through decoration-gray-400 mt-1">
                     {formatPrice(originalPrice || compareAtPrice || 0, currency)}
                   </p>
                 )}

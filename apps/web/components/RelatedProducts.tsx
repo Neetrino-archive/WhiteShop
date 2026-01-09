@@ -467,7 +467,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
                               </p>
 
                               {/* Price */}
-                              <div className="flex items-center gap-2 flex-wrap mt-auto">
+                              <div className="flex flex-col gap-1 mt-auto">
                                 <div className="flex items-center gap-2">
                                   <span className="text-lg font-bold text-gray-900">
                                     {formatPrice(product.price, currency)}
@@ -480,7 +480,7 @@ export function RelatedProducts({ categorySlug, currentProductId }: RelatedProdu
                                 </div>
                                 {(product.originalPrice && product.originalPrice > product.price) || 
                                  (product.compareAtPrice && product.compareAtPrice > product.price) ? (
-                                  <span className="text-sm text-gray-500 line-through">
+                                  <span className="text-sm text-gray-500 line-through decoration-gray-400">
                                     {formatPrice(
                                       (product.originalPrice && product.originalPrice > product.price) 
                                         ? product.originalPrice 
