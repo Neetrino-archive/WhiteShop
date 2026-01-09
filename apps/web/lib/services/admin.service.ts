@@ -2013,6 +2013,171 @@ class AdminService {
   }
 
   /**
+   * Update category
+   */
+  async updateCategory(categoryId: string, data: {
+    title?: string;
+    locale?: string;
+    parentId?: string | null;
+    requiresSizes?: boolean;
+  }) {
+    const locale = data.locale || "en";
+    
+    const category = await db.category.findUnique({
+      where: { id: categoryId },
+      include: {
+        translations: true,
+      },
+    });
+
+    if (!category) {
+      throw {
+        status: 404,
+        type: "https://api.shop.am/problems/not-found",
+        title: "Category not found",
+        detail: `Category with id '${categoryId}' does not exist`,
+      };
+    }
+
+    // Prevent circular reference (category cannot be its own parent)
+    if (data.parentId === categoryId) {
+      throw {
+        status: 400,
+        type: "https://api.shop.am/problems/bad-request",
+        title: "Invalid parent",
+        detail: "Category cannot be its own parent",
+      };
+    }
+
+    // Prevent setting parent to a child category (would create circular reference)
+    if (data.parentId) {
+      const potentialParent = await db.category.findUnique({
+        where: { id: data.parentId },
+        include: {
+          children: {
+            where: {
+              deletedAt: null,
+            },
+          },
+        },
+      });
+
+      if (!potentialParent) {
+        throw {
+          status: 404,
+          type: "https://api.shop.am/problems/not-found",
+          title: "Parent category not found",
+          detail: `Parent category with id '${data.parentId}' does not exist`,
+        };
+      }
+
+      // Check if the category to update is in the children of the potential parent
+      const isChild = await this.isCategoryDescendant(potentialParent.id, categoryId);
+      if (isChild) {
+        throw {
+          status: 400,
+          type: "https://api.shop.am/problems/bad-request",
+          title: "Circular reference",
+          detail: "Cannot set parent to a category that is a descendant of this category",
+        };
+      }
+    }
+
+    const updateData: any = {};
+    
+    if (data.parentId !== undefined) {
+      updateData.parentId = data.parentId || null;
+    }
+    
+    if (data.requiresSizes !== undefined) {
+      updateData.requiresSizes = data.requiresSizes;
+    }
+
+    // Update translation if title is provided
+    if (data.title) {
+      const slug = data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      const categoryTranslations = Array.isArray(category.translations) ? category.translations : [];
+      const existingTranslation = categoryTranslations.find((t: { locale: string }) => t.locale === locale);
+
+      if (existingTranslation) {
+        // Update existing translation
+        await db.categoryTranslation.update({
+          where: { id: existingTranslation.id },
+          data: {
+            title: data.title,
+            slug,
+          },
+        });
+      } else {
+        // Create new translation
+        await db.categoryTranslation.create({
+          data: {
+            categoryId: category.id,
+            locale,
+            title: data.title,
+            slug,
+            fullPath: slug,
+          },
+        });
+      }
+    }
+
+    // Update category base data
+    const updatedCategory = await db.category.update({
+      where: { id: categoryId },
+      data: updateData,
+      include: {
+        translations: true,
+      },
+    });
+
+    const categoryTranslations = Array.isArray(updatedCategory.translations) ? updatedCategory.translations : [];
+    const translation = categoryTranslations.find((t: { locale: string }) => t.locale === locale) || categoryTranslations[0] || null;
+
+    return {
+      data: {
+        id: updatedCategory.id,
+        title: translation?.title || "",
+        slug: translation?.slug || "",
+        parentId: updatedCategory.parentId,
+        requiresSizes: updatedCategory.requiresSizes || false,
+      },
+    };
+  }
+
+  /**
+   * Helper function to check if a category is a descendant of another category
+   */
+  private async isCategoryDescendant(ancestorId: string, descendantId: string, visited: Set<string> = new Set()): Promise<boolean> {
+    if (visited.has(descendantId)) {
+      // Circular reference detected
+      return false;
+    }
+    visited.add(descendantId);
+
+    const category = await db.category.findUnique({
+      where: { id: descendantId },
+      include: {
+        parent: true,
+      },
+    });
+
+    if (!category || !category.parent) {
+      return false;
+    }
+
+    if (category.parent.id === ancestorId) {
+      return true;
+    }
+
+    return this.isCategoryDescendant(ancestorId, category.parent.id, visited);
+  }
+
+  /**
    * Get brands for admin
    */
   async getBrands() {
