@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '../../../../lib/auth/AuthContext';
 import { Card, Button } from '@shop/ui';
 import { apiClient } from '../../../../lib/api-client';
+import { useTranslation } from '../../../../lib/i18n';
 
 interface OrderDetails {
   id: string;
@@ -55,6 +56,7 @@ interface OrderDetails {
 }
 
 export default function OrderDetailsPage() {
+  const { t } = useTranslation();
   const { isLoggedIn, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -98,7 +100,7 @@ export default function OrderDetailsPage() {
     // If we somehow don't have an order id, don't call the API
     if (!orderId) {
       console.error('❌ [ADMIN][OrderDetails] Missing orderId from route params');
-      setError('Order ID is missing in the URL');
+      setError(t('admin.orders.orderDetails.orderIdMissing'));
       setLoading(false);
       return;
     }
@@ -113,7 +115,7 @@ export default function OrderDetailsPage() {
         setOrder(response);
       } catch (err: any) {
         console.error('❌ [ADMIN][OrderDetails] Failed to load order details:', err);
-        setError(err?.message || 'Failed to load order details');
+        setError(err?.message || t('admin.orders.orderDetails.failedToLoad'));
       } finally {
         setLoading(false);
       }
@@ -129,7 +131,7 @@ export default function OrderDetailsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading order details...</p>
+          <p className="text-gray-600">{t('admin.orders.orderDetails.loadingOrderDetails')}</p>
         </div>
       </div>
     );
@@ -151,15 +153,15 @@ export default function OrderDetailsPage() {
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Back to Orders
+              {t('admin.orders.orderDetails.backToOrders')}
             </button>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Order Details {order ? `#${order.number}` : ''}
+              {t('admin.orders.orderDetails.title')} {order ? `#${order.number}` : ''}
             </h1>
             {order && (
               <p className="mt-1 text-sm text-gray-500">
-                Created at {new Date(order.createdAt).toLocaleString()}
-                {order.updatedAt ? ` • Updated at ${new Date(order.updatedAt).toLocaleString()}` : ''}
+                {t('admin.orders.orderDetails.createdAt')} {new Date(order.createdAt).toLocaleString()}
+                {order.updatedAt ? ` • ${t('admin.orders.orderDetails.updatedAt')} ${new Date(order.updatedAt).toLocaleString()}` : ''}
               </p>
             )}
           </div>
@@ -173,7 +175,7 @@ export default function OrderDetailsPage() {
 
         {!order && !error && (
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Order not found.</div>
+            <div className="text-sm text-gray-600">{t('admin.orders.orderDetails.orderNotFound')}</div>
           </Card>
         )}
 
@@ -183,31 +185,31 @@ export default function OrderDetailsPage() {
             <Card className="p-4 md:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900 mb-2">Summary</h2>
+                  <h2 className="text-sm font-semibold text-gray-900 mb-2">{t('admin.orders.orderDetails.summary')}</h2>
                   <div className="text-sm text-gray-700 space-y-1">
                     <div>
-                      <span className="font-medium">Order #:</span> {order.number}
+                      <span className="font-medium">{t('admin.orders.orderDetails.orderNumber')}</span> {order.number}
                     </div>
                     <div>
-                      <span className="font-medium">Total:</span>{' '}
+                      <span className="font-medium">{t('admin.orders.orderDetails.total')}</span>{' '}
                       {formatCurrency(order.total, order.currency || 'AMD')}
                     </div>
                     <div>
-                      <span className="font-medium">Status:</span> {order.status}
+                      <span className="font-medium">{t('admin.orders.orderDetails.status')}</span> {order.status}
                     </div>
                     <div>
-                      <span className="font-medium">Payment:</span> {order.paymentStatus}
+                      <span className="font-medium">{t('admin.orders.orderDetails.payment')}</span> {order.paymentStatus}
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900 mb-2">Customer</h2>
+                  <h2 className="text-sm font-semibold text-gray-900 mb-2">{t('admin.orders.orderDetails.customer')}</h2>
                   <div className="text-sm text-gray-700 space-y-1">
                     <div>
                       {(order.customer?.firstName || '') +
                         (order.customer?.lastName ? ' ' + order.customer.lastName : '') ||
-                        'Unknown customer'}
+                        t('admin.orders.unknownCustomer')}
                     </div>
                     {order.customerPhone && <div>{order.customerPhone}</div>}
                     {order.customerEmail && <div>{order.customerEmail}</div>}
@@ -219,56 +221,56 @@ export default function OrderDetailsPage() {
             {/* Addresses & Payment */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="p-4 md:p-6">
-                <h2 className="text-sm font-semibold text-gray-900 mb-2">Shipping Address</h2>
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">{t('admin.orders.orderDetails.shippingAddress')}</h2>
                 {order.shippingAddress ? (
                   <pre className="text-xs bg-gray-50 p-2 rounded border border-gray-200 overflow-x-auto">
                     {JSON.stringify(order.shippingAddress, null, 2)}
                   </pre>
                 ) : (
                   <div className="text-sm text-gray-500">
-                    <p>No shipping address</p>
-                    <p>Shipping method: pickup </p>
+                    <p>{t('admin.orders.orderDetails.noShippingAddress')}</p>
+                    <p>{t('admin.orders.orderDetails.shippingMethod')} {t('admin.orders.orderDetails.pickup')} </p>
                   </div>
                   
                 )}
               </Card>
 
               <Card className="p-4 md:p-6">
-                <h2 className="text-sm font-semibold text-gray-900 mb-2">Payment</h2>
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">{t('admin.orders.orderDetails.paymentInfo')}</h2>
                 {order.payment ? (
                   <div className="text-sm text-gray-700 space-y-1">
-                    {order.payment.method && <div>Method: {order.payment.method}</div>}
+                    {order.payment.method && <div>{t('admin.orders.orderDetails.method')} {order.payment.method}</div>}
                     <div>
-                      Amount:{' '}
+                      {t('admin.orders.orderDetails.amount')}{' '}
                       {formatCurrency(order.payment.amount, order.payment.currency || 'AMD')}
                     </div>
-                    <div>Status: {order.payment.status}</div>
+                    <div>{t('admin.orders.orderDetails.status')} {order.payment.status}</div>
                     {order.payment.cardBrand && order.payment.cardLast4 && (
                       <div>
-                        Card: {order.payment.cardBrand} ••••{order.payment.cardLast4}
+                        {t('admin.orders.orderDetails.card')} {order.payment.cardBrand} ••••{order.payment.cardLast4}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500">No payment information</div>
+                  <div className="text-sm text-gray-500">{t('admin.orders.orderDetails.noPaymentInfo')}</div>
                 )}
               </Card>
             </div>
 
             {/* Items */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Items</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('admin.orders.orderDetails.items')}</h2>
               {Array.isArray(order.items) && order.items.length > 0 ? (
                 <div className="overflow-x-auto border border-gray-200 rounded-md">
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-gray-500">Product</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-500">SKU</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-500">Color / Size</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-500">Qty</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-500">Price</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-500">Total</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('admin.orders.orderDetails.product')}</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('admin.orders.orderDetails.sku')}</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('admin.orders.orderDetails.colorSize')}</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-500">{t('admin.orders.orderDetails.qty')}</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-500">{t('admin.orders.orderDetails.price')}</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-500">{t('admin.orders.orderDetails.totalCol')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -326,7 +328,7 @@ export default function OrderDetailsPage() {
                   </table>
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">No items found for this order</div>
+                <div className="text-sm text-gray-500">{t('admin.orders.orderDetails.noItemsFound')}</div>
               )}
             </Card>
           </div>

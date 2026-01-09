@@ -7,6 +7,7 @@ import { useAuth } from '../../../../lib/auth/AuthContext';
 import { Card, Button, Input } from '@shop/ui';
 import { apiClient } from '../../../../lib/api-client';
 import { getColorHex, COLOR_MAP } from '../../../../lib/colorMap';
+import { useTranslation } from '../../../../lib/i18n';
 
 // Component for adding new color/size
 function NewColorSizeInput({ 
@@ -150,6 +151,7 @@ interface ProductData {
 }
 
 function AddProductPageContent() {
+  const { t } = useTranslation();
   const { isLoggedIn, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -274,7 +276,7 @@ function AddProductPageContent() {
         }
       } catch (err: any) {
         console.error('❌ [ADMIN] Error fetching data:', err);
-        alert(`Error loading data: ${err.message || 'Unknown error'}`);
+        alert(t('admin.products.add.errorLoadingData').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
       }
     };
     fetchData();
@@ -415,7 +417,7 @@ function AddProductPageContent() {
             if (!color) {
               // Create a default color entry for variants without colors
               const defaultColor = 'default';
-              const defaultColorLabel = 'Default';
+              const defaultColorLabel = t('admin.products.add.defaultColor');
               
               if (!colorDataMap.has(defaultColor)) {
                 const colorData: ColorData = {
@@ -803,7 +805,7 @@ function AddProductPageContent() {
           console.log('✅ [ADMIN] Product loaded for edit');
         } catch (err: any) {
           console.error('❌ [ADMIN] Error loading product:', err);
-          alert(`Error loading product: ${err.message || 'Unknown error'}`);
+          alert(t('admin.products.add.errorLoadingProduct').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
           router.push('/admin/products');
         } finally {
           setLoadingProduct(false);
@@ -1642,8 +1644,8 @@ function AddProductPageContent() {
           }
         } catch (err: any) {
           console.error('❌ [ADMIN] Error creating brand:', err);
-          const errorMessage = err?.data?.detail || err?.message || 'Unknown error';
-          alert(`Չհաջողվեց ստեղծել brand: ${errorMessage}`);
+          const errorMessage = err?.data?.detail || err?.message || t('admin.common.unknownErrorFallback');
+          alert(t('admin.products.add.errorCreatingBrand').replace('{message}', errorMessage));
           setLoading(false);
           return;
         }
@@ -1670,7 +1672,7 @@ function AddProductPageContent() {
           }
         } catch (err: any) {
           console.error('❌ [ADMIN] Error creating category:', err);
-          alert(`Չհաջողվեց ստեղծել կատեգորիա: ${err.message || 'Unknown error'}`);
+          alert(t('admin.products.add.errorCreatingCategory').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
           setLoading(false);
           return;
         }
@@ -2248,7 +2250,7 @@ function AddProductPageContent() {
                     value={formData.title}
                     onChange={handleTitleChange}
                     required
-                    placeholder="Product title"
+                    placeholder={t('admin.products.add.productTitlePlaceholder')}
                   />
                 </div>
 
@@ -2261,7 +2263,7 @@ function AddProductPageContent() {
                     value={formData.slug}
                     onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
                     required
-                    placeholder="product-slug"
+                    placeholder={t('admin.products.add.productSlugPlaceholder')}
                   />
                 </div>
 
@@ -2274,7 +2276,7 @@ function AddProductPageContent() {
                     rows={6}
                     value={formData.descriptionHtml}
                     onChange={(e) => setFormData((prev) => ({ ...prev, descriptionHtml: e.target.value }))}
-                    placeholder="Product description (HTML supported)"
+                    placeholder={t('admin.products.add.productDescriptionPlaceholder')}
                   />
                 </div>
               </div>
@@ -2377,7 +2379,7 @@ function AddProductPageContent() {
                           type="text"
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
-                          placeholder="Enter new category name"
+                          placeholder={t('admin.products.add.enterNewCategoryName')}
                           className="w-full"
                         />
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -2452,7 +2454,7 @@ function AddProductPageContent() {
                         type="text"
                         value={newBrandName}
                         onChange={(e) => setNewBrandName(e.target.value)}
-                        placeholder="Enter new brand name"
+                        placeholder={t('admin.products.add.enterNewBrandName')}
                         className="w-full"
                       />
                     )}
@@ -2475,8 +2477,8 @@ function AddProductPageContent() {
               </div>
               {formData.labels.length === 0 ? (
                 <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
-                  <p className="text-gray-500 mb-2">No labels added yet</p>
-                  <p className="text-sm text-gray-400">Add labels like "New Product", "Hot", "Sale" or percentage discounts like "50%"</p>
+                  <p className="text-gray-500 mb-2">{t('admin.products.add.noLabelsAdded')}</p>
+                  <p className="text-sm text-gray-400">{t('admin.products.add.addLabelsHint')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -2519,7 +2521,7 @@ function AddProductPageContent() {
                             type="text"
                             value={label.value}
                             onChange={(e) => updateLabel(index, 'value', e.target.value)}
-                            placeholder={label.type === 'percentage' ? '50 (will be auto-updated)' : 'New Product'}
+                            placeholder={label.type === 'percentage' ? t('admin.products.add.percentagePlaceholder') : t('admin.products.add.newProductLabel')}
                             required
                             className="w-full"
                           />
@@ -2557,7 +2559,7 @@ function AddProductPageContent() {
                             type="text"
                             value={label.color || ''}
                             onChange={(e) => updateLabel(index, 'color', e.target.value || null)}
-                            placeholder="#FF0000 or leave empty for default"
+                            placeholder={t('admin.products.add.colorHexPlaceholder')}
                             className="w-full"
                           />
                           <p className="mt-1 text-xs text-gray-500">Hex color code (e.g., #FF0000) or leave empty</p>
@@ -2599,7 +2601,7 @@ function AddProductPageContent() {
                       type="text"
                       value={newAttributeName}
                       onChange={(e) => setNewAttributeName(e.target.value)}
-                      placeholder="Attribute Name (e.g., Color, Size, Material)"
+                      placeholder={t('admin.products.add.attributeNamePlaceholder')}
                       className="w-full"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
@@ -2635,7 +2637,7 @@ function AddProductPageContent() {
                           type="text"
                           value={newAttributeValue}
                           onChange={(e) => setNewAttributeValue(e.target.value)}
-                          placeholder="Value (e.g., Red)"
+                          placeholder={t('admin.products.add.attributeValuePlaceholder')}
                           className="flex-1"
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
@@ -2669,7 +2671,7 @@ function AddProductPageContent() {
                                 onClick={() => handleDeleteAttributeValue(val.id)}
                                 disabled={deletingAttributeValue === val.id}
                                 className="text-red-600 hover:text-red-800 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                title="Delete value"
+                                title={t('admin.products.add.deleteValue')}
                               >
                                 {deletingAttributeValue === val.id ? (
                                   <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -3064,7 +3066,7 @@ function AddProductPageContent() {
                           <thead className="bg-gray-50">
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
-                                {matrixSelectedColors.length > 0 ? 'Color / Size' : matrixSelectedSizes.length > 0 ? 'Size' : 'Variant'}
+                                {matrixSelectedColors.length > 0 ? t('admin.products.add.colorSize') : matrixSelectedSizes.length > 0 ? t('admin.products.add.size') : t('admin.products.add.variant')}
                               </th>
                               {matrixSelectedSizes.length > 0 ? (
                                 matrixSelectedSizes.map((sizeValue) => {
@@ -3108,14 +3110,14 @@ function AddProductPageContent() {
                                             <div className="relative group mb-2">
                                               <img
                                                 src={matrixVariants[colorValue].image || ''}
-                                                alt="Preview"
+                                                alt={t('admin.products.add.preview')}
                                                 className="w-full h-24 object-cover rounded border border-gray-300"
                                               />
                                               <button
                                                 type="button"
                                                 onClick={() => removeMatrixImage(colorValue)}
                                                 className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                                title="Remove image"
+                                                title={t('admin.products.add.removeImage')}
                                               >
                                                 ×
                                               </button>
@@ -3211,7 +3213,7 @@ function AddProductPageContent() {
                                                     [key]: { ...variant, sku: e.target.value }
                                                   });
                                                 }}
-                                                placeholder="Auto-generated"
+                                                placeholder={t('admin.products.add.autoGenerated')}
                                                 className="w-full text-sm"
                                               />
                                             </div>
@@ -3632,7 +3634,7 @@ function AddProductPageContent() {
                                 sku: '',
                                 colors: [{
                                   colorValue: '',
-                                  colorLabel: 'Default',
+                                  colorLabel: t('admin.products.add.defaultColor'),
                                   images: [],
                                   stock: '',
                                   sizes: matrixSelectedSizes,
@@ -3696,7 +3698,7 @@ function AddProductPageContent() {
                                 sku: singleVariant?.sku || '',
                                 colors: [{
                                   colorValue: '',
-                                  colorLabel: 'Default',
+                                  colorLabel: t('admin.products.add.defaultColor'),
                                   images: singleVariant?.image ? [singleVariant.image] : [],
                                   stock: singleVariant?.stock || '',
                                   price: singleVariant?.price || undefined,

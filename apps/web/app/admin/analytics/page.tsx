@@ -455,12 +455,12 @@ export default function AnalyticsPage() {
             <svg className="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Admin Panel
+            {t('admin.analytics.backToAdmin')}
           </button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Analytics</h1>
-              <p className="text-gray-600">Track your business performance and insights</p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{t('admin.analytics.title')}</h1>
+              <p className="text-gray-600">{t('admin.analytics.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -576,7 +576,7 @@ export default function AnalyticsPage() {
                   <Card 
                     className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg hover:scale-105 hover:border-blue-400 transition-all duration-200 group cursor-pointer relative"
                     onClick={() => router.push('/admin/orders')}
-                    title="Click to view all orders"
+                    title={t('admin.analytics.clickToViewAllOrders')}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -597,7 +597,7 @@ export default function AnalyticsPage() {
                   <Card 
                     className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg hover:scale-105 hover:border-green-400 transition-all duration-200 group cursor-pointer relative"
                     onClick={() => router.push('/admin/orders?paymentStatus=paid')}
-                    title="Click to view paid orders"
+                    title={t('admin.analytics.clickToViewPaidOrders')}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -617,7 +617,7 @@ export default function AnalyticsPage() {
 
                   <Card 
                     className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg hover:scale-105 hover:border-indigo-400 transition-all duration-200 group cursor-default relative"
-                    title="Total registered users"
+                    title={t('admin.analytics.totalRegisteredUsers')}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -637,7 +637,7 @@ export default function AnalyticsPage() {
                   {/* Top Products */}
                   <Card className="p-6 bg-white shadow-sm border border-gray-200 rounded-xl">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-semibold text-gray-900">Top Selling Products</h2>
+                      <h2 className="text-xl font-semibold text-gray-900">{t('admin.analytics.topSellingProducts')}</h2>
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                         <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -676,7 +676,7 @@ export default function AnalyticsPage() {
                             )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate mb-1">{product.title}</p>
-                              <p className="text-xs text-gray-500 mb-1">SKU: {product.sku}</p>
+                              <p className="text-xs text-gray-500 mb-1">{t('admin.analytics.skuLabel')}: {product.sku}</p>
                               <div className="flex items-center gap-3 text-xs text-gray-600">
                                 <span className="flex items-center gap-1">
                                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

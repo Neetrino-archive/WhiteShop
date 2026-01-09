@@ -584,10 +584,10 @@ export default function QuickSettingsPage() {
                   {categorySaving ? (
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Saving...</span>
+                      <span>{t('admin.quickSettings.saving')}</span>
                     </div>
                   ) : (
-                    'Save'
+                    t('admin.quickSettings.save')
                   )}
                 </Button>
               </div>
@@ -612,7 +612,7 @@ export default function QuickSettingsPage() {
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {category.title || 'Untitled category'}
+                            {category.title || t('admin.quickSettings.untitledCategory')}
                           </p>
                           {category.parentId ? (
                             <p className="text-xs text-gray-500">{t('admin.quickSettings.parentCategoryId').replace('{id}', category.parentId)}</p>
@@ -691,7 +691,7 @@ export default function QuickSettingsPage() {
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {brand.name || 'Untitled brand'}
+                            {brand.name || t('admin.quickSettings.untitledBrand')}
                           </p>
                           <p className="text-xs text-gray-500">
                             {t('admin.quickSettings.brandId').replace('{id}', brand.id)}

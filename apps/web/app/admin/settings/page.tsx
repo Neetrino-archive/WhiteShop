@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth/AuthContext';
 import { Card, Button } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
+import { useTranslation } from '../../../lib/i18n';
 
 interface Settings {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { isLoggedIn, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -54,12 +56,12 @@ export default function SettingsPage() {
 
       await apiClient.put('/api/v1/admin/settings', {});
       
-      alert('Settings saved successfully!');
+      alert(t('admin.settings.savedSuccess'));
       console.log('✅ [ADMIN] Settings saved');
     } catch (err: any) {
       console.error('❌ [ADMIN] Error saving settings:', err);
       const errorMessage = err.response?.data?.detail || err.message || 'Failed to save settings';
-      alert(`Error: ${errorMessage}`);
+      alert(t('admin.settings.errorSaving').replace('{message}', errorMessage));
     } finally {
       setSaving(false);
     }
@@ -70,7 +72,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('admin.common.loading')}</p>
         </div>
       </div>
     );
@@ -91,33 +93,33 @@ export default function SettingsPage() {
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Admin Panel
+            {t('admin.settings.backToAdmin')}
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('admin.settings.title')}</h1>
         </div>
 
         {/* General Settings */}
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">General Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('admin.settings.generalSettings')}</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Site Name
+                {t('admin.settings.siteName')}
               </label>
               <input
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue="My Shop"
+                defaultValue={t('admin.settings.siteNamePlaceholder')}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Site Description
+                {t('admin.settings.siteDescription')}
               </label>
               <textarea
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
-                defaultValue="Your shop description"
+                defaultValue={t('admin.settings.siteDescriptionPlaceholder')}
               />
             </div>
           </div>
@@ -125,16 +127,16 @@ export default function SettingsPage() {
 
         {/* Payment Settings */}
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('admin.settings.paymentSettings')}</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Default Currency
+                {t('admin.settings.defaultCurrency')}
               </label>
               <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="AMD">AMD - Armenian Dram</option>
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
+                <option value="AMD">{t('admin.settings.amd')}</option>
+                <option value="USD">{t('admin.settings.usd')}</option>
+                <option value="EUR">{t('admin.settings.eur')}</option>
               </select>
             </div>
             <div>
@@ -144,7 +146,7 @@ export default function SettingsPage() {
                   defaultChecked
                   className="mr-2"
                 />
-                <span className="text-sm font-medium text-gray-700">Enable online payments</span>
+                <span className="text-sm font-medium text-gray-700">{t('admin.settings.enableOnlinePayments')}</span>
               </label>
             </div>
           </div>
@@ -157,14 +159,14 @@ export default function SettingsPage() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? 'Saving...' : 'Save Settings'}
+            {saving ? t('admin.settings.saving') : t('admin.settings.saveSettings')}
           </Button>
           <Button
             variant="ghost"
             onClick={() => router.push('/admin')}
             disabled={saving}
           >
-            Cancel
+            {t('admin.settings.cancel')}
           </Button>
         </div>
       </div>

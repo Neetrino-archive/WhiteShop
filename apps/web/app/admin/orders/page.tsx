@@ -190,7 +190,7 @@ export default function OrdersPage() {
             return { id, success: true };
           } catch (error: any) {
             console.error('❌ [ADMIN] Failed to delete order:', id, error);
-            return { id, success: false, error: error.message || 'Unknown error' };
+            return { id, success: false, error: error.message || t('admin.common.unknownErrorFallback') };
           }
         })
       );
@@ -406,14 +406,14 @@ export default function OrdersPage() {
         <Card className="p-4 mb-6">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Selected {selectedIds.size} orders
+              {t('admin.orders.selectedOrders').replace('{count}', selectedIds.size.toString())}
             </div>
             <Button
               variant="outline"
               onClick={handleBulkDelete}
               disabled={selectedIds.size === 0 || bulkDeleting}
             >
-              {bulkDeleting ? 'Deleting...' : 'Delete selected'}
+              {bulkDeleting ? t('admin.orders.deleting') : t('admin.orders.deleteSelected')}
             </Button>
           </div>
         </Card>
@@ -438,29 +438,29 @@ export default function OrdersPage() {
                       <th className="px-4 py-3">
                         <input
                           type="checkbox"
-                          aria-label="Select all orders"
+                          aria-label={t('admin.orders.selectAllOrders')}
                           checked={orders.length > 0 && orders.every(o => selectedIds.has(o.id))}
                           onChange={toggleSelectAll}
                         />
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Order #
+                        {t('admin.orders.orderNumber')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Customer
+                        {t('admin.orders.customer')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
+                        {t('admin.orders.status')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Payment
+                        {t('admin.orders.payment')}
                       </th>
                       <th 
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                         onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center gap-1">
-                          Total
+                          {t('admin.orders.total')}
                           <div className="flex flex-col">
                             <svg 
                               className={`w-3 h-3 ${sortBy === 'total' && sortOrder === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}
@@ -480,14 +480,14 @@ export default function OrdersPage() {
                         </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Items
+                        {t('admin.orders.items')}
                       </th>
                       <th 
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                         onClick={() => handleSort('createdAt')}
                       >
                         <div className="flex items-center gap-1">
-                          Date
+                          {t('admin.orders.date')}
                           <div className="flex flex-col">
                             <svg 
                               className={`w-3 h-3 ${sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}
@@ -514,7 +514,7 @@ export default function OrdersPage() {
                         <td className="px-4 py-4">
                           <input
                             type="checkbox"
-                            aria-label={`Select order ${order.number}`}
+                            aria-label={t('admin.orders.selectOrder').replace('{number}', order.number)}
                             checked={selectedIds.has(order.id)}
                             onChange={() => toggleSelect(order.id)}
                           />
@@ -544,7 +544,7 @@ export default function OrdersPage() {
                             {updatingStatuses.has(order.id) ? (
                               <div className="flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                                <span className="text-xs text-gray-500">Updating...</span>
+                                <span className="text-xs text-gray-500">{t('admin.orders.updating')}</span>
                               </div>
                             ) : (
                               <select
@@ -552,10 +552,10 @@ export default function OrdersPage() {
                                 onChange={(e) => handleStatusChange(order.id, e.target.value)}
                                 className={`px-2 py-1 text-xs font-medium rounded-md border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${getStatusColor(order.status)}`}
                               >
-                                <option value="pending">Pending</option>
-                                <option value="processing">Processing</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
+                                <option value="pending">{t('admin.orders.pending')}</option>
+                                <option value="processing">{t('admin.orders.processing')}</option>
+                                <option value="completed">{t('admin.orders.completed')}</option>
+                                <option value="cancelled">{t('admin.orders.cancelled')}</option>
                               </select>
                             )}
                           </div>
@@ -565,7 +565,7 @@ export default function OrdersPage() {
                             {updatingPaymentStatuses.has(order.id) ? (
                               <div className="flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                                <span className="text-xs text-gray-500">Updating...</span>
+                                <span className="text-xs text-gray-500">{t('admin.orders.updating')}</span>
                               </div>
                             ) : (
                               <select
@@ -573,9 +573,9 @@ export default function OrdersPage() {
                                 onChange={(e) => handlePaymentStatusChange(order.id, e.target.value)}
                                 className={`px-2 py-1 text-xs font-medium rounded-md border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${getPaymentStatusColor(order.paymentStatus)}`}
                               >
-                                <option value="paid">Paid</option>
-                                <option value="pending">Pending</option>
-                                <option value="failed">Failed</option>
+                                <option value="paid">{t('admin.orders.paid')}</option>
+                                <option value="pending">{t('admin.orders.pendingPayment')}</option>
+                                <option value="failed">{t('admin.orders.failed')}</option>
                               </select>
                             )}
                           </div>
@@ -599,7 +599,7 @@ export default function OrdersPage() {
               {meta && meta.totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between">
                   <div className="text-sm text-gray-700">
-                    Showing page {meta.page} of {meta.totalPages} ({meta.total} total)
+                    {t('admin.orders.showingPage').replace('{page}', meta.page.toString()).replace('{totalPages}', meta.totalPages.toString()).replace('{total}', meta.total.toString())}
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -607,14 +607,14 @@ export default function OrdersPage() {
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                     >
-                      Previous
+                      {t('admin.orders.previous')}
                     </Button>
                     <Button
                       variant="ghost"
                       onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                       disabled={page === meta.totalPages}
                     >
-                      Next
+                      {t('admin.orders.next')}
                     </Button>
                   </div>
                 </div>

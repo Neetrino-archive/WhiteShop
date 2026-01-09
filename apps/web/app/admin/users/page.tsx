@@ -156,7 +156,7 @@ export default function UsersPage() {
       }
     } catch (err: any) {
       console.error('❌ [ADMIN] Error updating user status:', err);
-      alert(t('admin.users.errorUpdatingStatus').replace('{message}', err.message || 'Unknown error'));
+      alert(t('admin.users.errorUpdatingStatus').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
     }
   };
 

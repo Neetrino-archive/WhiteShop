@@ -140,7 +140,7 @@ function BrandsSection() {
     return (
       <div className="text-center py-4">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2"></div>
-        <p className="text-sm text-gray-600">Loading brands...</p>
+        <p className="text-sm text-gray-600">{t('admin.brands.loading')}</p>
       </div>
     );
   }
@@ -317,9 +317,9 @@ export default function BrandsPage() {
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Admin Panel
+            {t('admin.common.backToAdmin')}
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Brands</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('admin.brands.title')}</h1>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">

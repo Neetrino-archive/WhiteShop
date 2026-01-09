@@ -166,7 +166,7 @@ export default function ProductsPage() {
       setMeta(response.meta || null);
     } catch (err: any) {
       console.error('❌ [ADMIN] Error fetching products:', err);
-      alert(t('admin.products.errorLoading').replace('{message}', err.message || 'Unknown error'));
+      alert(t('admin.products.errorLoading').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
     } finally {
       setLoading(false);
     }
@@ -355,7 +355,7 @@ export default function ProductsPage() {
       alert(t('admin.products.deletedSuccess'));
     } catch (err: any) {
       console.error('❌ [ADMIN] Error deleting product:', err);
-      alert(t('admin.products.errorDeleting').replace('{message}', err.message || 'Unknown error'));
+      alert(t('admin.products.errorDeleting').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
     }
   };
 
@@ -386,7 +386,7 @@ export default function ProductsPage() {
       }
     } catch (err: any) {
       console.error('❌ [ADMIN] Error updating product status:', err);
-      alert(t('admin.products.errorUpdatingStatus').replace('{message}', err.message || 'Unknown error'));
+      alert(t('admin.products.errorUpdatingStatus').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
     }
   };
 
@@ -408,7 +408,7 @@ export default function ProductsPage() {
       fetchProducts();
     } catch (err: any) {
       console.error('❌ [ADMIN] Error updating product featured status:', err);
-      alert(t('admin.products.errorUpdatingFeatured').replace('{message}', err.message || 'Unknown error'));
+      alert(t('admin.products.errorUpdatingFeatured').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
     }
   };
 
