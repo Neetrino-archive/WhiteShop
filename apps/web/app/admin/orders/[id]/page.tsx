@@ -222,16 +222,58 @@ export default function OrderDetailsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="p-4 md:p-6">
                 <h2 className="text-sm font-semibold text-gray-900 mb-2">{t('admin.orders.orderDetails.shippingAddress')}</h2>
-                {order.shippingAddress ? (
-                  <pre className="text-xs bg-gray-50 p-2 rounded border border-gray-200 overflow-x-auto">
-                    {JSON.stringify(order.shippingAddress, null, 2)}
-                  </pre>
+                {order.shippingMethod === 'pickup' ? (
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div>
+                      <span className="font-medium">{t('admin.orders.orderDetails.shippingMethod')}</span>{' '}
+                      {t('checkout.shipping.storePickup')}
+                    </div>
+                    <p className="text-gray-500 mt-2">{t('checkout.shipping.storePickupDescription')}</p>
+                  </div>
+                ) : order.shippingMethod === 'delivery' && order.shippingAddress ? (
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div className="mb-2">
+                      <span className="font-medium">{t('admin.orders.orderDetails.shippingMethod')}</span>{' '}
+                      {t('checkout.shipping.delivery')}
+                    </div>
+                    {(order.shippingAddress.address || order.shippingAddress.addressLine1) && (
+                      <div>
+                        <span className="font-medium">{t('checkout.form.address')}:</span>{' '}
+                        {order.shippingAddress.address || order.shippingAddress.addressLine1}
+                        {order.shippingAddress.addressLine2 && `, ${order.shippingAddress.addressLine2}`}
+                      </div>
+                    )}
+                    {order.shippingAddress.city && (
+                      <div>
+                        <span className="font-medium">{t('checkout.form.city')}:</span> {order.shippingAddress.city}
+                      </div>
+                    )}
+                    {order.shippingAddress.postalCode && (
+                      <div>
+                        <span className="font-medium">{t('checkout.form.postalCode')}:</span> {order.shippingAddress.postalCode}
+                      </div>
+                    )}
+                    {(order.shippingAddress.phone || order.shippingAddress.shippingPhone) && (
+                      <div className="mt-2">
+                        <span className="font-medium">{t('checkout.form.phoneNumber')}:</span>{' '}
+                        {order.shippingAddress.phone || order.shippingAddress.shippingPhone}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="text-sm text-gray-500">
                     <p>{t('admin.orders.orderDetails.noShippingAddress')}</p>
-                    <p>{t('admin.orders.orderDetails.shippingMethod')} {t('admin.orders.orderDetails.pickup')} </p>
+                    {order.shippingMethod && (
+                      <p>
+                        {t('admin.orders.orderDetails.shippingMethod')}{' '}
+                        {order.shippingMethod === 'pickup' 
+                          ? t('admin.orders.orderDetails.pickup')
+                          : order.shippingMethod === 'delivery'
+                          ? t('checkout.shipping.delivery')
+                          : order.shippingMethod}
+                      </p>
+                    )}
                   </div>
-                  
                 )}
               </Card>
 
