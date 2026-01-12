@@ -2533,13 +2533,20 @@ class AdminService {
           name: translation?.name || attribute.key,
           type: attribute.type,
           filterable: attribute.filterable,
-          values: values.map((value: { id: string; value: string; translations?: Array<{ label: string }> }) => {
+          values: values.map((value: any) => {
             const valueTranslations = Array.isArray(value.translations) ? value.translations : [];
             const valueTranslation = valueTranslations[0] || null;
+            const colorsData = value.colors;
+            const colorsArray = Array.isArray(colorsData) 
+              ? colorsData 
+              : (colorsData ? JSON.parse(colorsData as string) : []);
+            
             return {
               id: value.id,
               value: value.value,
               label: valueTranslation?.label || value.value,
+              colors: colorsArray,
+              imageUrl: value.imageUrl || null,
             };
           }),
         };
@@ -2713,6 +2720,146 @@ class AdminService {
           id: val.id,
           value: val.value,
           label: valTranslation?.label || val.value,
+          colors: Array.isArray(val.colors) ? val.colors : (val.colors ? JSON.parse(val.colors as string) : []),
+          imageUrl: val.imageUrl || null,
+        };
+      }),
+    };
+  }
+
+  /**
+   * Update attribute value
+   */
+  async updateAttributeValue(
+    attributeId: string,
+    valueId: string,
+    data: {
+      label?: string;
+      colors?: string[];
+      imageUrl?: string | null;
+      locale?: string;
+    }
+  ) {
+    console.log('✏️ [ADMIN SERVICE] Updating attribute value:', { attributeId, valueId, data });
+
+    const attributeValue = await db.attributeValue.findUnique({
+      where: { id: valueId },
+      include: {
+        attribute: true,
+        translations: true,
+      },
+    });
+
+    if (!attributeValue) {
+      throw {
+        status: 404,
+        type: "https://api.shop.am/problems/not-found",
+        title: "Attribute value not found",
+        detail: `Attribute value with id '${valueId}' does not exist`,
+      };
+    }
+
+    if (attributeValue.attributeId !== attributeId) {
+      throw {
+        status: 400,
+        type: "https://api.shop.am/problems/validation-error",
+        title: "Validation Error",
+        detail: "Attribute value does not belong to the specified attribute",
+      };
+    }
+
+    const locale = data.locale || "en";
+    const updateData: any = {};
+
+    // Update colors if provided
+    if (data.colors !== undefined) {
+      updateData.colors = data.colors.length > 0 ? data.colors : [];
+    }
+
+    // Update imageUrl if provided
+    if (data.imageUrl !== undefined) {
+      updateData.imageUrl = data.imageUrl || null;
+    }
+
+    // Update translation label if provided
+    if (data.label !== undefined) {
+      const existingTranslation = attributeValue.translations.find(
+        (t: any) => t.locale === locale
+      );
+
+      if (existingTranslation) {
+        await db.attributeValueTranslation.update({
+          where: { id: existingTranslation.id },
+          data: { label: data.label.trim() },
+        });
+      } else {
+        await db.attributeValueTranslation.create({
+          data: {
+            attributeValueId: valueId,
+            locale,
+            label: data.label.trim(),
+          },
+        });
+      }
+    }
+
+    // Update attribute value if colors or imageUrl changed
+    if (Object.keys(updateData).length > 0) {
+      await db.attributeValue.update({
+        where: { id: valueId },
+        data: updateData,
+      });
+    }
+
+    // Return updated attribute with all values
+    const updatedAttribute = await db.attribute.findUnique({
+      where: { id: attributeId },
+      include: {
+        translations: {
+          where: { locale },
+        },
+        values: {
+          include: {
+            translations: {
+              where: { locale },
+            },
+          },
+          orderBy: { position: "asc" },
+        },
+      },
+    });
+
+    if (!updatedAttribute) {
+      throw {
+        status: 500,
+        type: "https://api.shop.am/problems/internal-error",
+        title: "Internal Server Error",
+        detail: "Failed to retrieve updated attribute",
+      };
+    }
+
+    const translation = updatedAttribute.translations[0];
+    const values = updatedAttribute.values || [];
+
+    return {
+      id: updatedAttribute.id,
+      key: updatedAttribute.key,
+      name: translation?.name || updatedAttribute.key,
+      type: updatedAttribute.type,
+      filterable: updatedAttribute.filterable,
+      values: values.map((val: any) => {
+        const valTranslation = val.translations?.[0];
+        const colorsData = val.colors;
+        const colorsArray = Array.isArray(colorsData) 
+          ? colorsData 
+          : (colorsData ? JSON.parse(colorsData as string) : []);
+        
+        return {
+          id: val.id,
+          value: val.value,
+          label: valTranslation?.label || val.value,
+          colors: colorsArray,
+          imageUrl: val.imageUrl || null,
         };
       }),
     };

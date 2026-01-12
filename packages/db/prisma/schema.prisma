@@ -170,6 +170,8 @@ model AttributeValue {
   attributeId    String
   value          String
   position       Int                         @default(0)
+  colors         Json?                       @default("[]")
+  imageUrl       String?
   translations   AttributeValueTranslation[]
   variantOptions ProductVariantOption[]
 

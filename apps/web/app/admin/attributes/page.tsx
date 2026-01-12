@@ -7,11 +7,15 @@ import { apiClient } from '../../../lib/api-client';
 import { AdminMenuDrawer } from '../../../components/AdminMenuDrawer';
 import { getAdminMenuTABS } from '../admin-menu.config';
 import { useTranslation } from '../../../lib/i18n-client';
+import { AttributeValueEditModal } from '../../../components/AttributeValueEditModal';
+import { showToast } from '../../../components/Toast';
 
 interface AttributeValue {
   id: string;
   value: string;
   label: string;
+  colors?: string[];
+  imageUrl?: string | null;
 }
 
 interface Attribute {
@@ -39,6 +43,8 @@ function AttributesPageContent() {
   const [newValue, setNewValue] = useState('');
   const [addingValueTo, setAddingValueTo] = useState<string | null>(null);
   const [deletingValue, setDeletingValue] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<{ attributeId: string; value: AttributeValue } | null>(null);
+  const [valueError, setValueError] = useState<string | null>(null);
 
   const fetchAttributes = useCallback(async () => {
     try {
@@ -63,7 +69,7 @@ function AttributesPageContent() {
     e.preventDefault();
     
     if (!formData.name.trim()) {
-      alert(t('admin.attributes.fillName'));
+      showToast(t('admin.attributes.fillName'), 'warning');
       return;
     }
 
@@ -84,11 +90,11 @@ function AttributesPageContent() {
       setShowAddForm(false);
       setFormData({ name: '' });
       fetchAttributes();
-      alert(t('admin.attributes.createdSuccess'));
+      showToast(t('admin.attributes.createdSuccess'), 'success');
     } catch (err: any) {
       console.error('❌ [ADMIN] Error creating attribute:', err);
       const errorMessage = err?.data?.detail || err?.message || 'Failed to create attribute';
-      alert(t('admin.attributes.errorCreating').replace('{message}', errorMessage));
+      showToast(t('admin.attributes.errorCreating').replace('{message}', errorMessage), 'error');
     }
   };
 
@@ -102,36 +108,74 @@ function AttributesPageContent() {
       await apiClient.delete(`/api/v1/admin/attributes/${attributeId}`);
       console.log('✅ [ADMIN] Attribute deleted successfully');
       fetchAttributes();
-      alert(t('admin.attributes.deletedSuccess'));
+      showToast(t('admin.attributes.deletedSuccess'), 'success');
     } catch (err: any) {
       console.error('❌ [ADMIN] Error deleting attribute:', err);
       const errorMessage = err?.data?.detail || err?.message || 'Failed to delete attribute';
-      alert(t('admin.attributes.errorDeleting').replace('{message}', errorMessage));
+      showToast(t('admin.attributes.errorDeleting').replace('{message}', errorMessage), 'error');
     }
   };
 
   const handleAddValue = async (attributeId: string) => {
-    if (!newValue.trim()) {
-      alert(t('admin.attributes.enterValue'));
+    const trimmedValue = newValue.trim();
+    
+    if (!trimmedValue) {
+      showToast(t('admin.attributes.enterValue'), 'warning');
+      setValueError(t('admin.attributes.enterValue'));
       return;
     }
 
+    // Find the attribute
+    const attribute = attributes.find((attr) => attr.id === attributeId);
+    if (!attribute) {
+      showToast(t('admin.attributes.attributeNotFound'), 'error');
+      return;
+    }
+
+    // Check for duplicates on frontend (case-insensitive, normalized)
+    const normalizedNewValue = trimmedValue.toLowerCase().trim();
+    const existingValue = attribute.values.find((val) => {
+      const normalizedExisting = val.label.toLowerCase().trim();
+      return normalizedExisting === normalizedNewValue;
+    });
+
+    if (existingValue) {
+      const errorMsg = t('admin.attributes.valueAlreadyExists').replace('{value}', trimmedValue);
+      showToast(errorMsg, 'error', 5000);
+      setValueError(errorMsg);
+      return;
+    }
+
+    // Clear any previous errors
+    setValueError(null);
+
     try {
       setAddingValueTo(attributeId);
-      console.log('➕ [ADMIN] Adding value to attribute:', attributeId, newValue);
+      console.log('➕ [ADMIN] Adding value to attribute:', attributeId, trimmedValue);
       await apiClient.post(`/api/v1/admin/attributes/${attributeId}/values`, {
-        label: newValue.trim(),
+        label: trimmedValue,
         locale: 'en',
       });
       
       console.log('✅ [ADMIN] Value added successfully');
       setNewValue('');
+      setValueError(null);
       setAddingValueTo(null);
+      showToast(t('admin.attributes.valueAddedSuccess'), 'success');
       fetchAttributes();
     } catch (err: any) {
       console.error('❌ [ADMIN] Error adding value:', err);
-      const errorMessage = err?.data?.detail || err?.message || 'Failed to add value';
-      alert(t('admin.attributes.errorAddingValue').replace('{message}', errorMessage));
+      const errorMessage = err?.data?.detail || err?.message || t('admin.attributes.failedToAddValue');
+      
+      // Check if it's a duplicate error from backend
+      if (errorMessage.includes('already exists') || errorMessage.includes('уже существует')) {
+        const duplicateMsg = t('admin.attributes.valueAlreadyExists').replace('{value}', trimmedValue);
+        showToast(duplicateMsg, 'error', 5000);
+        setValueError(duplicateMsg);
+      } else {
+        showToast(errorMessage, 'error', 5000);
+        setValueError(errorMessage);
+      }
       setAddingValueTo(null);
     }
   };
@@ -148,11 +192,36 @@ function AttributesPageContent() {
       console.log('✅ [ADMIN] Value deleted successfully');
       fetchAttributes();
       setDeletingValue(null);
+      showToast(t('admin.attributes.valueDeletedSuccess'), 'success');
     } catch (err: any) {
       console.error('❌ [ADMIN] Error deleting value:', err);
       const errorMessage = err?.data?.detail || err?.message || 'Failed to delete value';
-      alert(t('admin.attributes.errorDeletingValue').replace('{message}', errorMessage));
+      showToast(t('admin.attributes.errorDeletingValue').replace('{message}', errorMessage), 'error');
       setDeletingValue(null);
+    }
+  };
+
+  const handleUpdateValue = async (data: {
+    label?: string;
+    colors?: string[];
+    imageUrl?: string | null;
+  }) => {
+    if (!editingValue) return;
+
+    try {
+      console.log('✏️ [ADMIN] Updating value:', { valueId: editingValue.value.id, data });
+      await apiClient.patch(`/api/v1/admin/attributes/${editingValue.attributeId}/values/${editingValue.value.id}`, {
+        ...data,
+        locale: 'en',
+      });
+      console.log('✅ [ADMIN] Value updated successfully');
+      fetchAttributes();
+      showToast(t('admin.attributes.valueUpdatedSuccess'), 'success');
+    } catch (err: any) {
+      console.error('❌ [ADMIN] Error updating value:', err);
+      const errorMessage = err?.data?.detail || err?.message || 'Failed to update value';
+      showToast(t('admin.attributes.errorUpdatingValue')?.replace('{message}', errorMessage) || errorMessage, 'error');
+      throw err;
     }
   };
 
@@ -320,38 +389,62 @@ function AttributesPageContent() {
                   {isExpanded && (
                     <div className="border-t border-gray-200 p-4 bg-gray-50">
                       {/* Add Value Form */}
-                      <div className="mb-4 flex gap-2">
-                        <input
-                          type="text"
-                          value={newValue}
-                          onChange={(e) => setNewValue(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && newValue.trim()) {
-                              handleAddValue(attribute.id);
-                            }
-                          }}
-                          placeholder={t('admin.attributes.addNewValue')}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                        />
-                        <button
-                          onClick={() => handleAddValue(attribute.id)}
-                          disabled={!newValue.trim() || addingValueTo === attribute.id}
-                          className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                          {addingValueTo === attribute.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              {t('admin.attributes.adding')}
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                              </svg>
-                              {t('admin.attributes.add')}
-                            </>
-                          )}
-                        </button>
+                      <div className="mb-4">
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              value={newValue}
+                              onChange={(e) => {
+                                setNewValue(e.target.value);
+                                // Clear error when user starts typing
+                                if (valueError) {
+                                  setValueError(null);
+                                }
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' && newValue.trim()) {
+                                  handleAddValue(attribute.id);
+                                }
+                              }}
+                              placeholder={t('admin.attributes.addNewValue')}
+                              className={`
+                                w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent transition-colors
+                                ${valueError 
+                                  ? 'border-red-300 bg-red-50 focus:ring-red-500' 
+                                  : 'border-gray-300 focus:ring-gray-900'
+                                }
+                              `}
+                            />
+                            {valueError && (
+                              <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {valueError}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleAddValue(attribute.id)}
+                            disabled={!newValue.trim() || addingValueTo === attribute.id}
+                            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          >
+                            {addingValueTo === attribute.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                {t('admin.attributes.adding')}
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                {t('admin.attributes.add')}
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
 
                       {/* Values List */}
@@ -364,21 +457,32 @@ function AttributesPageContent() {
                               key={value.id}
                               className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
                             >
-                              <span className="text-sm font-medium text-gray-900">{value.label}</span>
-                              <button
-                                onClick={() => handleDeleteValue(attribute.id, value.id, value.label)}
-                                disabled={deletingValue === value.id}
-                                className="text-red-600 hover:text-red-800 disabled:opacity-50 transition-colors"
-                                title={t('admin.attributes.deleteValue')}
-                              >
-                                {deletingValue === value.id ? (
-                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                ) : (
+                              <span className="text-sm font-medium text-gray-900 flex-1">{value.label}</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setEditingValue({ attributeId: attribute.id, value })}
+                                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                                  title={t('admin.attributes.configureValue') || 'Configure value'}
+                                >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                   </svg>
-                                )}
-                              </button>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteValue(attribute.id, value.id, value.label)}
+                                  disabled={deletingValue === value.id}
+                                  className="text-red-600 hover:text-red-800 disabled:opacity-50 transition-colors"
+                                  title={t('admin.attributes.deleteValue')}
+                                >
+                                  {deletingValue === value.id ? (
+                                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -391,6 +495,22 @@ function AttributesPageContent() {
           </div>
         )}
       </div>
+
+      {/* Value Configuration Modal */}
+      {editingValue && (
+        <AttributeValueEditModal
+          isOpen={!!editingValue}
+          onClose={() => setEditingValue(null)}
+          value={{
+            id: editingValue.value.id,
+            label: editingValue.value.label,
+            colors: editingValue.value.colors || [],
+            imageUrl: editingValue.value.imageUrl || null,
+          }}
+          attributeId={editingValue.attributeId}
+          onSave={handleUpdateValue}
+        />
+      )}
     </div>
   );
 }
