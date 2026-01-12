@@ -186,6 +186,7 @@ function AddProductPageContent() {
   const colorImageFileInputRef = useRef<HTMLInputElement | null>(null);
   const mainProductImageInputRef = useRef<HTMLInputElement | null>(null);
   const attributesDropdownRef = useRef<HTMLDivElement | null>(null);
+  const valueDropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [attributesDropdownOpen, setAttributesDropdownOpen] = useState(false);
   const [colorImageTarget, setColorImageTarget] = useState<{ variantId: string; colorValue: string } | null>(null);
   const [imageUploadLoading, setImageUploadLoading] = useState(false);
@@ -207,9 +208,14 @@ function AddProductPageContent() {
   // New Multi-Attribute Variant Builder state
   const [selectedAttributesForVariants, setSelectedAttributesForVariants] = useState<Set<string>>(new Set()); // Selected attribute IDs
   const [selectedAttributeValueIds, setSelectedAttributeValueIds] = useState<Record<string, string[]>>({}); // Key: attributeId, Value: array of selected value IDs
+  // State for managing open dropdowns in the variants table
+  const [openValueDropdown, setOpenValueDropdown] = useState<string | null>(null); // attributeId of the open dropdown
   const [generatedVariants, setGeneratedVariants] = useState<Array<{
-    id: string; // Unique ID for this variant combination
-    attributeValues: Array<{ attributeId: string; attributeKey: string; attributeName: string; valueId: string; value: string; label: string }>; // All attribute values for this variant
+    id: string; // Unique ID for this variant (attributeId)
+    attributeId: string; // The attribute this variant belongs to
+    attributeKey: string; // Attribute key (e.g., 'color', 'size')
+    attributeName: string; // Attribute name (e.g., 'Color', 'Size')
+    selectedValueIds: string[]; // Array of selected value IDs for this attribute
     price: string;
     compareAtPrice: string;
     stock: string;
@@ -241,6 +247,26 @@ function AddProductPageContent() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [attributesDropdownOpen]);
+
+  // Close value dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openValueDropdown) {
+        const ref = valueDropdownRefs.current[openValueDropdown];
+        if (ref && !ref.contains(event.target as Node)) {
+          setOpenValueDropdown(null);
+        }
+      }
+    };
+
+    if (openValueDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openValueDropdown]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -776,8 +802,9 @@ function AddProductPageContent() {
   };
 
   // Generate variants from selected attributes
+  // NEW LOGIC: One variant per attribute (not per combination)
   const generateVariantsFromAttributes = () => {
-    console.log('🚀 [VARIANT BUILDER] Generating variants from attributes...');
+    console.log('🚀 [VARIANT BUILDER] Generating variants from attributes (one per attribute)...');
     
     const selectedAttrs = Array.from(selectedAttributesForVariants);
     if (selectedAttrs.length === 0) {
@@ -786,93 +813,52 @@ function AddProductPageContent() {
       return;
     }
 
-    // Get all selected value IDs for each attribute
-    const attributeValueGroups: string[][] = [];
-    const attributeMetadata: Array<{ attributeId: string; attributeKey: string; attributeName: string }> = [];
-    
-    selectedAttrs.forEach((attributeId) => {
+    // Create one variant per attribute
+    const variants = selectedAttrs.map((attributeId) => {
       const attribute = attributes.find(a => a.id === attributeId);
-      if (!attribute) return;
+      if (!attribute) return null;
       
       const selectedValueIds = selectedAttributeValueIds[attributeId] || [];
-      if (selectedValueIds.length === 0) return;
       
-      attributeValueGroups.push(selectedValueIds);
-      attributeMetadata.push({
+      // Generate SKU based on attribute and selected values
+      const baseSlug = formData.slug || generateSlug(formData.title) || 'PROD';
+      const attributeKey = attribute.key.toUpperCase();
+      let sku = `${baseSlug}-${attributeKey}`;
+      
+      // If values are selected, add them to SKU
+      if (selectedValueIds.length > 0) {
+        const valueParts = selectedValueIds.map(valueId => {
+          const value = attribute.values.find(v => v.id === valueId);
+          return value ? value.value.toUpperCase().replace(/\s+/g, '-') : '';
+        }).filter(Boolean);
+        if (valueParts.length > 0) {
+          sku = `${baseSlug}-${valueParts.join('-')}`;
+        }
+      }
+
+      return {
+        id: attributeId, // Use attributeId as variant ID
         attributeId: attribute.id,
         attributeKey: attribute.key,
         attributeName: attribute.name,
-      });
-    });
-
-    if (attributeValueGroups.length === 0) {
-      console.log('⚠️ [VARIANT BUILDER] No attribute values selected');
-      setGeneratedVariants([]);
-      return;
-    }
-
-    // Generate all combinations
-    const combinations = generateAttributeCombinations(attributeValueGroups);
-    console.log(`✅ [VARIANT BUILDER] Generated ${combinations.length} variant combinations`);
-
-    // Create variant objects
-    const variants = combinations.map((combination, index) => {
-      const attributeValues: Array<{ attributeId: string; attributeKey: string; attributeName: string; valueId: string; value: string; label: string }> = [];
-      
-      combination.forEach((valueId, attrIndex) => {
-        const attrMeta = attributeMetadata[attrIndex];
-        const attribute = attributes.find(a => a.id === attrMeta.attributeId);
-        const value = attribute?.values.find(v => v.id === valueId);
-        
-        if (value && attrMeta) {
-          attributeValues.push({
-            attributeId: attrMeta.attributeId,
-            attributeKey: attrMeta.attributeKey,
-            attributeName: attrMeta.attributeName,
-            valueId: value.id,
-            value: value.value,
-            label: value.label,
-          });
-        }
-      });
-
-      // Generate unique ID for this variant combination
-      const variantId = combination.join('-');
-      
-      // Generate SKU
-      const baseSlug = formData.slug || generateSlug(formData.title) || 'PROD';
-      const skuParts = attributeValues.map(av => av.value.toUpperCase().replace(/\s+/g, '-'));
-      const sku = `${baseSlug.toUpperCase()}-${skuParts.join('-')}`;
-
-      return {
-        id: variantId,
-        attributeValues,
+        selectedValueIds: selectedValueIds, // All selected values for this attribute
         price: '',
         compareAtPrice: '',
         stock: '',
         sku,
         image: null,
       };
-    });
+    }).filter((v): v is NonNullable<typeof v> => v !== null);
 
     setGeneratedVariants(variants);
-    console.log('✅ [VARIANT BUILDER] Variants generated:', variants.length);
+    console.log('✅ [VARIANT BUILDER] Variants generated (one per attribute):', variants.length);
   };
 
   // Update variants when attributes or values change
+  // NEW LOGIC: Generate one variant per selected attribute, even if no values selected yet
   useEffect(() => {
     if (selectedAttributesForVariants.size > 0) {
-      // Check if at least one attribute has selected values
-      const hasSelectedValues = Array.from(selectedAttributesForVariants).some(attrId => {
-        const selectedIds = selectedAttributeValueIds[attrId] || [];
-        return selectedIds.length > 0;
-      });
-      
-      if (hasSelectedValues) {
-        generateVariantsFromAttributes();
-      } else {
-        setGeneratedVariants([]);
-      }
+      generateVariantsFromAttributes();
     } else {
       setGeneratedVariants([]);
     }
@@ -1707,109 +1693,117 @@ function AddProductPageContent() {
       }
 
       // Convert new variant builder variants to formData.variants if attributes are selected
+      // NEW LOGIC: One variant per attribute, multiple values per variant
       if (selectedAttributesForVariants.size > 0 && generatedVariants.length > 0) {
         console.log('🔄 [ADMIN] Converting new variant builder variants to formData format...');
         
-        // Group variants by color (if color attribute exists)
         const colorAttribute = attributes.find(a => a.key === 'color');
         const colorAttributeId = colorAttribute?.id;
+        const colorVariant = generatedVariants.find(v => v.attributeId === colorAttributeId);
         
-        if (colorAttributeId && selectedAttributesForVariants.has(colorAttributeId)) {
-          // Group by color
-          const variantsByColor = new Map<string, typeof generatedVariants>();
-          
-          generatedVariants.forEach((variant) => {
-            const colorValue = variant.attributeValues.find(av => av.attributeId === colorAttributeId);
-            if (colorValue) {
-              const colorKey = colorValue.value;
-              if (!variantsByColor.has(colorKey)) {
-                variantsByColor.set(colorKey, []);
+        const sizeAttribute = attributes.find(a => a.key === 'size');
+        const sizeAttributeId = sizeAttribute?.id;
+        const sizeVariant = generatedVariants.find(v => v.attributeId === sizeAttributeId);
+        
+        // Create colors from color variant (if exists)
+        const colors: ColorData[] = [];
+        
+        if (colorVariant && colorAttribute) {
+          // Create one ColorData per selected color value
+          colorVariant.selectedValueIds.forEach((valueId) => {
+            const value = colorAttribute.values.find(v => v.id === valueId);
+            if (value) {
+              const colorData: ColorData = {
+                colorValue: value.value,
+                colorLabel: value.label,
+                images: [],
+                stock: colorVariant.stock || '0',
+                sizes: [],
+                sizeStocks: {},
+              };
+              
+              // Add price if set
+              if (colorVariant.price) {
+                colorData.price = colorVariant.price;
               }
-              variantsByColor.get(colorKey)!.push(variant);
-            }
-          });
-          
-          // Convert to formData.variants format
-          const newVariants: Variant[] = [];
-          variantsByColor.forEach((colorVariants, colorValue) => {
-            const colorAttributeValue = colorAttribute.values.find(v => v.value === colorValue);
-            const colorLabel = colorAttributeValue?.label || colorValue;
-            const colorData: ColorData = {
-              colorValue,
-              colorLabel,
-              images: [],
-              stock: '',
-              sizes: [],
-              sizeStocks: {},
-            };
-            
-            // Check if any variant has size
-            const sizeAttribute = attributes.find(a => a.key === 'size');
-            const hasSizes = sizeAttribute && selectedAttributesForVariants.has(sizeAttribute.id);
-            
-            if (hasSizes) {
-              colorVariants.forEach((variant) => {
-                const sizeValue = variant.attributeValues.find(av => av.attributeId === sizeAttribute!.id);
-                if (sizeValue) {
-                  if (!colorData.sizes.includes(sizeValue.value)) {
+              if (colorVariant.compareAtPrice) {
+                colorData.compareAtPrice = colorVariant.compareAtPrice;
+              }
+              
+              // Add sizes from size variant (if exists)
+              if (sizeVariant && sizeAttribute) {
+                sizeVariant.selectedValueIds.forEach((sizeValueId) => {
+                  const sizeValue = sizeAttribute.values.find(v => v.id === sizeValueId);
+                  if (sizeValue) {
                     colorData.sizes.push(sizeValue.value);
+                    colorData.sizeStocks[sizeValue.value] = sizeVariant.stock || '0';
+                    if (!colorData.sizePrices) colorData.sizePrices = {};
+                    colorData.sizePrices[sizeValue.value] = sizeVariant.price || '0';
                   }
-                  colorData.sizeStocks[sizeValue.value] = variant.stock || '0';
-                  if (!colorData.sizePrices) colorData.sizePrices = {};
-                  colorData.sizePrices[sizeValue.value] = variant.price || '0';
-                }
-              });
-            } else {
-              // No sizes, use first variant's stock
-              if (colorVariants.length > 0) {
-                colorData.stock = colorVariants[0].stock || '0';
-                if (colorVariants[0].price) {
-                  colorData.price = colorVariants[0].price;
-                }
+                });
               }
+              
+              colors.push(colorData);
             }
-            
-            newVariants.push({
-              id: `variant-${Date.now()}-${Math.random()}`,
-              price: colorVariants[0]?.price || '0',
-              compareAtPrice: colorVariants[0]?.compareAtPrice || '',
-              sku: colorVariants[0]?.sku || '',
-              colors: [colorData],
-            });
           });
-          
-          formData.variants = newVariants;
-        } else {
-          // No color attribute, create single variant or group by first attribute
-          const firstAttributeId = Array.from(selectedAttributesForVariants)[0];
-          if (firstAttributeId) {
-            const variantsByFirstAttr = new Map<string, typeof generatedVariants>();
-            
-            generatedVariants.forEach((variant) => {
-              const firstValue = variant.attributeValues.find(av => av.attributeId === firstAttributeId);
-              if (firstValue) {
-                const key = firstValue.value;
-                if (!variantsByFirstAttr.has(key)) {
-                  variantsByFirstAttr.set(key, []);
-                }
-                variantsByFirstAttr.get(key)!.push(variant);
-              }
-            });
-            
-            // For simplicity, create one variant with all combinations
-            // This is a simplified version - you may want to enhance this
-            const newVariants: Variant[] = [{
-              id: `variant-${Date.now()}`,
-              price: generatedVariants[0]?.price || '0',
-              compareAtPrice: generatedVariants[0]?.compareAtPrice || '',
-              sku: generatedVariants[0]?.sku || '',
-              colors: [],
-            }];
-            
-            formData.variants = newVariants;
-          }
         }
         
+        // Create variant(s)
+        const newVariants: Variant[] = [];
+        
+        if (colors.length > 0) {
+          // Use first color variant's price/sku as base, or use size variant's if no color variant
+          const baseVariant = colorVariant || sizeVariant || generatedVariants[0];
+          
+          newVariants.push({
+            id: `variant-${Date.now()}-${Math.random()}`,
+            price: baseVariant?.price || '0',
+            compareAtPrice: baseVariant?.compareAtPrice || '',
+            sku: baseVariant?.sku || '',
+            colors: colors,
+          });
+        } else if (sizeVariant && sizeAttribute) {
+          // No color, but has size - create variant with empty colors but sizes in a default structure
+          // This is a fallback for non-color attributes
+          const colorData: ColorData = {
+            colorValue: '',
+            colorLabel: '',
+            images: [],
+            stock: sizeVariant.stock || '0',
+            sizes: [],
+            sizeStocks: {},
+          };
+          
+          sizeVariant.selectedValueIds.forEach((sizeValueId) => {
+            const sizeValue = sizeAttribute.values.find(v => v.id === sizeValueId);
+            if (sizeValue) {
+              colorData.sizes.push(sizeValue.value);
+              colorData.sizeStocks[sizeValue.value] = sizeVariant.stock || '0';
+              if (!colorData.sizePrices) colorData.sizePrices = {};
+              colorData.sizePrices[sizeValue.value] = sizeVariant.price || '0';
+            }
+          });
+          
+          newVariants.push({
+            id: `variant-${Date.now()}-${Math.random()}`,
+            price: sizeVariant.price || '0',
+            compareAtPrice: sizeVariant.compareAtPrice || '',
+            sku: sizeVariant.sku || '',
+            colors: [colorData],
+          });
+        } else {
+          // No color or size - create minimal variant
+          const firstVariant = generatedVariants[0];
+          newVariants.push({
+            id: `variant-${Date.now()}-${Math.random()}`,
+            price: firstVariant?.price || '0',
+            compareAtPrice: firstVariant?.compareAtPrice || '',
+            sku: firstVariant?.sku || '',
+            colors: [],
+          });
+        }
+        
+        formData.variants = newVariants;
         console.log('✅ [ADMIN] Converted variants:', formData.variants.length);
       }
 
@@ -3149,12 +3143,22 @@ function AddProductPageContent() {
                             onClick={() => {
                               const skuPrefix = prompt(t('admin.products.add.enterSkuPrefix') || 'Enter SKU prefix:');
                               if (skuPrefix !== null) {
-                                const baseSlug = formData.slug || generateSlug(formData.title) || 'PROD';
-                                generatedVariants.forEach((variant, index) => {
-                                  const skuParts = variant.attributeValues.map(av => av.value.toUpperCase().replace(/\s+/g, '-'));
-                                  const sku = skuPrefix ? `${skuPrefix}-${skuParts.join('-')}` : `${baseSlug.toUpperCase()}-${index + 1}`;
-                                  applyToAllVariants('sku', sku);
-                                });
+                                const baseSlug = skuPrefix || formData.slug || generateSlug(formData.title) || 'PROD';
+                                setGeneratedVariants(prev => prev.map((variant) => {
+                                  const attribute = attributes.find(a => a.id === variant.attributeId);
+                                  if (!attribute) return variant;
+                                  
+                                  const selectedValues = variant.selectedValueIds.map(valueId => {
+                                    const value = attribute.values.find(v => v.id === valueId);
+                                    return value ? value.value.toUpperCase().replace(/\s+/g, '-') : '';
+                                  }).filter(Boolean);
+                                  
+                                  const sku = selectedValues.length > 0 
+                                    ? `${baseSlug.toUpperCase()}-${selectedValues.join('-')}`
+                                    : `${baseSlug.toUpperCase()}-${variant.attributeKey.toUpperCase()}`;
+                                  
+                                  return { ...variant, sku };
+                                }));
                               }
                             }}
                           >
@@ -3190,90 +3194,231 @@ function AddProductPageContent() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {generatedVariants.map((variant) => (
-                              <tr key={variant.id} className="hover:bg-gray-50">
-                                {Array.from(selectedAttributesForVariants).map((attributeId) => {
-                                  const attrValue = variant.attributeValues.find(av => av.attributeId === attributeId);
-                                  const attribute = attributes.find(a => a.id === attributeId);
-                                  const isColor = attribute?.key === 'color';
-                                  const colorHex = isColor && attrValue 
-                                    ? (attributes.find(a => a.id === attributeId)?.values.find(v => v.id === attrValue.valueId)?.colors?.[0] || 
-                                       getColorHex(attrValue.label))
-                                    : null;
-                                  
-                                  return (
-                                    <td key={attributeId} className="px-4 py-3 whitespace-nowrap">
-                                      <div className="flex items-center gap-2">
-                                        {isColor && colorHex && (
-                                          <span
-                                            className="inline-block w-5 h-5 rounded-full border-2 border-gray-300 shadow-sm"
-                                            style={{ backgroundColor: colorHex }}
-                                          />
-                                        )}
-                                        <span className="text-sm text-gray-900">{attrValue?.label || '-'}</span>
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <Input
-                                    type="number"
-                                    value={variant.price}
-                                    onChange={(e) => {
-                                      setGeneratedVariants(prev => prev.map(v => 
-                                        v.id === variant.id ? { ...v, price: e.target.value } : v
-                                      ));
-                                    }}
-                                    placeholder="0.00"
-                                    className="w-24 text-sm"
-                                    min="0"
-                                    step="0.01"
-                                  />
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <Input
-                                    type="number"
-                                    value={variant.compareAtPrice}
-                                    onChange={(e) => {
-                                      setGeneratedVariants(prev => prev.map(v => 
-                                        v.id === variant.id ? { ...v, compareAtPrice: e.target.value } : v
-                                      ));
-                                    }}
-                                    placeholder="0.00"
-                                    className="w-24 text-sm"
-                                    min="0"
-                                    step="0.01"
-                                  />
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <Input
-                                    type="number"
-                                    value={variant.stock}
-                                    onChange={(e) => {
-                                      setGeneratedVariants(prev => prev.map(v => 
-                                        v.id === variant.id ? { ...v, stock: e.target.value } : v
-                                      ));
-                                    }}
-                                    placeholder="0"
-                                    className="w-24 text-sm"
-                                    min="0"
-                                  />
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <Input
-                                    type="text"
-                                    value={variant.sku}
-                                    onChange={(e) => {
-                                      setGeneratedVariants(prev => prev.map(v => 
-                                        v.id === variant.id ? { ...v, sku: e.target.value } : v
-                                      ));
-                                    }}
-                                    placeholder="Auto-generated"
-                                    className="w-32 text-sm"
-                                  />
-                                </td>
-                              </tr>
-                            ))}
+                            {generatedVariants.map((variant) => {
+                              const attribute = attributes.find(a => a.id === variant.attributeId);
+                              const isColor = attribute?.key === 'color';
+                              const selectedValues = variant.selectedValueIds.map(valueId => {
+                                const value = attribute?.values.find(v => v.id === valueId);
+                                return value ? {
+                                  id: value.id,
+                                  label: value.label,
+                                  value: value.value,
+                                  colorHex: isColor ? (value.colors?.[0] || getColorHex(value.label)) : null,
+                                } : null;
+                              }).filter((v): v is NonNullable<typeof v> => v !== null);
+                              
+                              return (
+                                <tr key={variant.id} className="hover:bg-gray-50">
+                                  {Array.from(selectedAttributesForVariants).map((attributeId) => {
+                                    // If this is the variant's attribute, show the clickable value selector
+                                    if (attributeId === variant.attributeId) {
+                                      return (
+                                        <td key={attributeId} className="px-4 py-3 whitespace-nowrap">
+                                          <div className="relative" ref={(el) => { valueDropdownRefs.current[attributeId] = el; }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setOpenValueDropdown(openValueDropdown === attributeId ? null : attributeId);
+                                              }}
+                                              className="w-full text-left flex items-center gap-2 p-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                              <div className="flex-1 flex flex-wrap items-center gap-1 min-w-0">
+                                                {selectedValues.length > 0 ? (
+                                                  selectedValues.map((val) => (
+                                                    <span
+                                                      key={val.id}
+                                                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm"
+                                                    >
+                                                      {isColor && val.colorHex && (
+                                                        <span
+                                                          className="inline-block w-4 h-4 rounded-full border border-gray-300"
+                                                          style={{ backgroundColor: val.colorHex }}
+                                                        />
+                                                      )}
+                                                      {val.label}
+                                                    </span>
+                                                  ))
+                                                ) : (
+                                                  <span className="text-sm text-gray-500">Click to select values</span>
+                                                )}
+                                              </div>
+                                              <svg
+                                                className={`w-4 h-4 text-gray-400 transition-transform ${openValueDropdown === attributeId ? 'rotate-180' : ''}`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                              </svg>
+                                            </button>
+                                            
+                                            {openValueDropdown === attributeId && attribute && (
+                                              <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                                                <div className="p-2">
+                                                  {/* "All" option */}
+                                                  <label className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={attribute.values.length > 0 && variant.selectedValueIds.length === attribute.values.length}
+                                                      onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                          // Select all values
+                                                          const allValueIds = attribute.values.map(v => v.id);
+                                                          setSelectedAttributeValueIds(prev => ({
+                                                            ...prev,
+                                                            [attributeId]: allValueIds,
+                                                          }));
+                                                          // Update variant
+                                                          setGeneratedVariants(prev => prev.map(v => 
+                                                            v.id === variant.id ? { ...v, selectedValueIds: allValueIds } : v
+                                                          ));
+                                                        } else {
+                                                          // Deselect all
+                                                          setSelectedAttributeValueIds(prev => ({
+                                                            ...prev,
+                                                            [attributeId]: [],
+                                                          }));
+                                                          setGeneratedVariants(prev => prev.map(v => 
+                                                            v.id === variant.id ? { ...v, selectedValueIds: [] } : v
+                                                          ));
+                                                        }
+                                                      }}
+                                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm font-medium text-gray-900">All</span>
+                                                  </label>
+                                                  
+                                                  <div className="border-t border-gray-200 my-1"></div>
+                                                  
+                                                  {/* Individual value checkboxes */}
+                                                  {attribute.values.map((value) => {
+                                                    const isSelected = variant.selectedValueIds.includes(value.id);
+                                                    const valueColorHex = isColor && value.colors && value.colors.length > 0 
+                                                      ? value.colors[0] 
+                                                      : isColor 
+                                                        ? getColorHex(value.label) 
+                                                        : null;
+                                                    
+                                                    return (
+                                                      <label
+                                                        key={value.id}
+                                                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${
+                                                          isSelected
+                                                            ? 'bg-blue-50 border-2 border-blue-600'
+                                                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                                                        }`}
+                                                      >
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={isSelected}
+                                                          onChange={(e) => {
+                                                            const currentIds = variant.selectedValueIds;
+                                                            let newIds: string[];
+                                                            
+                                                            if (e.target.checked) {
+                                                              newIds = [...currentIds, value.id];
+                                                            } else {
+                                                              newIds = currentIds.filter(id => id !== value.id);
+                                                            }
+                                                            
+                                                            // Update selectedAttributeValueIds
+                                                            setSelectedAttributeValueIds(prev => ({
+                                                              ...prev,
+                                                              [attributeId]: newIds,
+                                                            }));
+                                                            
+                                                            // Update variant
+                                                            setGeneratedVariants(prev => prev.map(v => 
+                                                              v.id === variant.id ? { ...v, selectedValueIds: newIds } : v
+                                                            ));
+                                                          }}
+                                                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                        />
+                                                        {isColor && valueColorHex && (
+                                                          <span
+                                                            className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm flex-shrink-0"
+                                                            style={{ backgroundColor: valueColorHex }}
+                                                          />
+                                                        )}
+                                                        <span className="text-sm text-gray-900 flex-1">{value.label}</span>
+                                                      </label>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </td>
+                                      );
+                                    }
+                                    
+                                    // For other attributes, show empty cell
+                                    return (
+                                      <td key={attributeId} className="px-4 py-3 whitespace-nowrap">
+                                        <span className="text-sm text-gray-400">-</span>
+                                      </td>
+                                    );
+                                  })}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <Input
+                                      type="number"
+                                      value={variant.price}
+                                      onChange={(e) => {
+                                        setGeneratedVariants(prev => prev.map(v => 
+                                          v.id === variant.id ? { ...v, price: e.target.value } : v
+                                        ));
+                                      }}
+                                      placeholder="0.00"
+                                      className="w-24 text-sm"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <Input
+                                      type="number"
+                                      value={variant.compareAtPrice}
+                                      onChange={(e) => {
+                                        setGeneratedVariants(prev => prev.map(v => 
+                                          v.id === variant.id ? { ...v, compareAtPrice: e.target.value } : v
+                                        ));
+                                      }}
+                                      placeholder="0.00"
+                                      className="w-24 text-sm"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <Input
+                                      type="number"
+                                      value={variant.stock}
+                                      onChange={(e) => {
+                                        setGeneratedVariants(prev => prev.map(v => 
+                                          v.id === variant.id ? { ...v, stock: e.target.value } : v
+                                        ));
+                                      }}
+                                      placeholder="0"
+                                      className="w-24 text-sm"
+                                      min="0"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <Input
+                                      type="text"
+                                      value={variant.sku}
+                                      onChange={(e) => {
+                                        setGeneratedVariants(prev => prev.map(v => 
+                                          v.id === variant.id ? { ...v, sku: e.target.value } : v
+                                        ));
+                                      }}
+                                      placeholder="Auto-generated"
+                                      className="w-32 text-sm"
+                                    />
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
