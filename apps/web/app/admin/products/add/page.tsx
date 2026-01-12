@@ -83,6 +83,8 @@ interface Attribute {
     id: string;
     value: string;
     label: string;
+    colors?: string[];
+    imageUrl?: string | null;
   }>;
 }
 
@@ -2981,14 +2983,36 @@ function AddProductPageContent() {
                       {variant.colors && variant.colors.length > 0 ? (
                         <div className="space-y-4">
                           {variant.colors.map((colorData, colorIndex) => {
-                            const colorHex = getColorHex(colorData.colorLabel);
+                            // Get color attribute value to access colors array
+                            const colorAttributeValue = getColorAttribute()?.values.find(v => v.value === colorData.colorValue);
+                            const attributeColors = colorAttributeValue?.colors || [];
+                            
+                            // Use first color from attribute colors array if available, otherwise use colorHex from label
+                            const primaryColorHex = attributeColors.length > 0 
+                              ? attributeColors[0] 
+                              : getColorHex(colorData.colorLabel);
+                            
                             return (
                               <div key={colorIndex} className="border border-gray-200 rounded-lg p-4 bg-white">
                                 <div className="flex items-center gap-3 mb-3">
-                                  <span
-                                    className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
-                                    style={{ backgroundColor: colorHex }}
-                                  />
+                                  {/* Show color swatches from attribute value if available */}
+                                  {attributeColors.length > 0 ? (
+                                    <div className="flex items-center gap-1">
+                                      {attributeColors.map((colorHex, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+                                          style={{ backgroundColor: colorHex }}
+                                          title={colorHex}
+                                        />
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span
+                                      className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+                                      style={{ backgroundColor: primaryColorHex }}
+                                    />
+                                  )}
                                   <span className="text-base font-semibold text-gray-900">
                                     {colorData.colorLabel}
                                   </span>
@@ -3024,21 +3048,30 @@ function AddProductPageContent() {
                                     </div>
                                   </div>
                                 )}
-                                {colorData.images && colorData.images.length > 0 && (
-                                  <div className="mt-3">
-                                    <label className="block text-xs text-gray-500 mb-2">{t('admin.products.add.images')}</label>
-                                    <div className="flex gap-2 flex-wrap">
-                                      {colorData.images.map((img, imgIndex) => (
-                                        <img
-                                          key={imgIndex}
-                                          src={img}
-                                          alt={`${colorData.colorLabel} ${imgIndex + 1}`}
-                                          className="w-20 h-20 object-cover rounded border border-gray-300"
-                                        />
-                                      ))}
+                                {(() => {
+                                  // Get attribute value imageUrl if not already in images
+                                  const attributeImageUrl = colorAttributeValue?.imageUrl;
+                                  const allImages = [...(colorData.images || [])];
+                                  if (attributeImageUrl && !allImages.includes(attributeImageUrl)) {
+                                    allImages.unshift(attributeImageUrl); // Add attribute image first
+                                  }
+                                  
+                                  return allImages.length > 0 ? (
+                                    <div className="mt-3">
+                                      <label className="block text-xs text-gray-500 mb-2">{t('admin.products.add.images')}</label>
+                                      <div className="flex gap-2 flex-wrap">
+                                        {allImages.map((img, imgIndex) => (
+                                          <img
+                                            key={imgIndex}
+                                            src={img}
+                                            alt={`${colorData.colorLabel} ${imgIndex + 1}`}
+                                            className="w-20 h-20 object-cover rounded border border-gray-300"
+                                          />
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  ) : null;
+                                })()}
                               </div>
                             );
                           })}
@@ -3355,25 +3388,55 @@ function AddProductPageContent() {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {matrixSelectedColors.length > 0 ? (
                               matrixSelectedColors.map((colorValue) => {
-                              const colorLabel = getColorAttribute()?.values.find(v => v.value === colorValue)?.label || colorValue;
-                              const colorHex = getColorHex(colorLabel);
+                              const colorAttributeValue = getColorAttribute()?.values.find(v => v.value === colorValue);
+                              const colorLabel = colorAttributeValue?.label || colorValue;
+                              const attributeColors = colorAttributeValue?.colors || [];
+                              const colorHex = attributeColors.length > 0 ? attributeColors[0] : getColorHex(colorLabel);
                               
                               return (
                                 <tr key={colorValue} className="hover:bg-gray-50">
                                   <td className="px-4 py-3 sticky left-0 bg-white z-10 border-r">
                                     <div className="space-y-3">
                                       <div className="flex items-center gap-2">
-                                        <span
-                                          className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
-                                          style={{ backgroundColor: colorHex }}
-                                        />
+                                        {/* Show color swatches from attribute value if available */}
+                                        {attributeColors.length > 0 ? (
+                                          <div className="flex items-center gap-1">
+                                            {attributeColors.map((colorHexValue, idx) => (
+                                              <span
+                                                key={idx}
+                                                className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+                                                style={{ backgroundColor: colorHexValue }}
+                                                title={colorHexValue}
+                                              />
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <span
+                                            className="inline-block w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+                                            style={{ backgroundColor: colorHex }}
+                                          />
+                                        )}
                                         <span className="text-sm font-medium text-gray-900">{colorLabel}</span>
                                       </div>
                                       {/* Image Upload Section - Per Row */}
                                       <div>
                                         <label className="block text-xs text-gray-500 mb-1">{t('admin.products.add.image')}</label>
                                         <div className="space-y-2">
-                                          {/* Preview existing image */}
+                                          {/* Preview attribute value image if available */}
+                                          {colorAttributeValue?.imageUrl && (
+                                            <div className="relative group mb-2">
+                                              <img
+                                                src={colorAttributeValue.imageUrl}
+                                                alt={t('admin.products.add.preview')}
+                                                className="w-full h-24 object-cover rounded border border-gray-300"
+                                                title={t('admin.products.add.fromAttribute')}
+                                              />
+                                              <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                                                {t('admin.products.add.fromAttribute') || 'From Attribute'}
+                                              </div>
+                                            </div>
+                                          )}
+                                          {/* Preview existing image from matrix */}
                                           {matrixVariants[colorValue]?.image && (
                                             <div className="relative group mb-2">
                                               <img
@@ -3807,7 +3870,18 @@ function AddProductPageContent() {
                             if (matrixSelectedColors.length > 0) {
                               // Group by color (one variant per color with all its sizes)
                               matrixSelectedColors.forEach((colorValue) => {
-                              const colorLabel = getColorAttribute()?.values.find(v => v.value === colorValue)?.label || colorValue;
+                              const colorAttributeValue = getColorAttribute()?.values.find(v => v.value === colorValue);
+                              const colorLabel = colorAttributeValue?.label || colorValue;
+                              
+                              // Get colors and imageUrl from attribute value
+                              const attributeColors = colorAttributeValue?.colors || [];
+                              const attributeImageUrl = colorAttributeValue?.imageUrl;
+                              
+                              // Initialize images array with attribute imageUrl if available
+                              const initialImages: string[] = [];
+                              if (attributeImageUrl) {
+                                initialImages.push(attributeImageUrl);
+                              }
                               
                               const variant: Variant = {
                                 id: `variant-${Date.now()}-${colorValue}`,
@@ -3817,7 +3891,7 @@ function AddProductPageContent() {
                                 colors: [{
                                   colorValue,
                                   colorLabel,
-                                  images: [],
+                                  images: initialImages,
                                   stock: matrixSelectedSizes.length === 0 ? (matrixVariants[colorValue]?.stock || '') : '',
                                   price: matrixSelectedSizes.length === 0 ? (matrixVariants[colorValue]?.price || '') : undefined,
                                   compareAtPrice: matrixSelectedSizes.length === 0 ? (matrixVariants[colorValue]?.compareAtPrice || '') : undefined,
@@ -3839,10 +3913,10 @@ function AddProductPageContent() {
                                   variant.sku = firstSizeVariant.sku || '';
                                 }
                                 
-                                // Use image from color row (stored with colorValue key)
+                                // Use image from color row (stored with colorValue key) or attribute value
                                 const colorRowImage = matrixVariants[colorValue]?.image;
-                                if (colorRowImage) {
-                                  variant.colors[0].images = [colorRowImage];
+                                if (colorRowImage && !variant.colors[0].images.includes(colorRowImage)) {
+                                  variant.colors[0].images.push(colorRowImage);
                                 }
                                 
                                 matrixSelectedSizes.forEach((sizeValue) => {
@@ -3884,9 +3958,9 @@ function AddProductPageContent() {
                                   variant.colors[0].price = colorVariant.price;
                                   variant.colors[0].compareAtPrice = colorVariant.compareAtPrice;
                                   variant.sku = colorVariant.sku || '';
-                                  // Add color's image
-                                  if (colorVariant.image) {
-                                    variant.colors[0].images = [colorVariant.image];
+                                  // Add color's image from matrix if not already added from attribute
+                                  if (colorVariant.image && !variant.colors[0].images.includes(colorVariant.image)) {
+                                    variant.colors[0].images.push(colorVariant.image);
                                   }
                                 }
                               }

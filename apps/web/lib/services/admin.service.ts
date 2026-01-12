@@ -2499,13 +2499,36 @@ class AdminService {
    * Get attributes for admin
    */
   async getAttributes() {
-    const attributes = await db.attribute.findMany({
-      include: {
-        translations: {
-          where: { locale: "en" },
-          take: 1,
+    let attributes;
+    try {
+      attributes = await db.attribute.findMany({
+        include: {
+          translations: {
+            where: { locale: "en" },
+            take: 1,
+          },
+          values: {
+            include: {
+              translations: {
+                where: { locale: "en" },
+                take: 1,
+              },
+            },
+            orderBy: {
+              position: "asc",
+            },
+          },
         },
-        values: {
+        orderBy: {
+          position: "asc",
+        },
+      });
+    } catch (error: any) {
+      // If attribute_values.colors column doesn't exist, fetch without it
+      if (error?.code === 'P2022' || error?.message?.includes('attribute_values.colors') || error?.message?.includes('does not exist')) {
+        console.warn('⚠️ [ADMIN SERVICE] attribute_values.colors column not found, fetching without it:', error.message);
+        // Fetch attributes first
+        const attributesList = await db.attribute.findMany({
           include: {
             translations: {
               where: { locale: "en" },
@@ -2515,15 +2538,101 @@ class AdminService {
           orderBy: {
             position: "asc",
           },
-        },
-      },
-      orderBy: {
-        position: "asc",
-      },
-    });
+        });
+
+        // Fetch values separately without colors and imageUrl using Prisma
+        // Try with select first, if it fails (because Prisma tries to select colors), use raw query
+        let allValues: any[];
+        try {
+          allValues = await db.attributeValue.findMany({
+            select: {
+              id: true,
+              attributeId: true,
+              value: true,
+              position: true,
+              translations: {
+                where: { locale: "en" },
+                take: 1,
+              },
+            },
+            orderBy: {
+              position: "asc",
+            },
+          });
+        } catch (selectError: any) {
+          // If select also fails, use raw query with correct column name
+          // Try with quoted name first, then without quotes
+          console.warn('⚠️ [ADMIN SERVICE] Using raw query for attribute values:', selectError.message);
+          try {
+            allValues = await db.$queryRaw`
+              SELECT 
+                av.id,
+                av."attributeId",
+                av.value,
+                av.position
+              FROM attribute_values av
+              ORDER BY av.position ASC
+            ` as any[];
+          } catch (rawError: any) {
+            // If quoted name doesn't work, try without quotes (snake_case)
+            console.warn('⚠️ [ADMIN SERVICE] Trying with snake_case column name:', rawError.message);
+            allValues = await db.$queryRaw`
+              SELECT 
+                av.id,
+                av.attribute_id as "attributeId",
+                av.value,
+                av.position
+              FROM attribute_values av
+              ORDER BY av.position ASC
+            ` as any[];
+          }
+          
+          // Fetch translations separately
+          const valueIds = allValues.map((v: any) => v.id);
+          const valueTranslations = valueIds.length > 0 
+            ? await db.attributeValueTranslation.findMany({
+                where: {
+                  attributeValueId: { in: valueIds },
+                  locale: "en",
+                },
+              })
+            : [];
+          
+          // Add translations to values
+          allValues = allValues.map((val: any) => ({
+            ...val,
+            translations: valueTranslations.filter((t: any) => t.attributeValueId === val.id),
+          }));
+        }
+
+        // Combine attributes with their values
+        attributes = attributesList.map((attr: any) => {
+          const attrValues = allValues
+            .filter((val: any) => val.attributeId === attr.id)
+            .map((val: any) => {
+              return {
+                id: val.id,
+                attributeId: val.attributeId,
+                value: val.value,
+                position: val.position,
+                colors: null, // Add null for compatibility
+                imageUrl: null, // Add null for compatibility
+                translations: Array.isArray(val.translations) ? val.translations : [],
+              };
+            });
+          
+          return {
+            ...attr,
+            values: attrValues,
+          };
+        });
+      } else {
+        throw error;
+      }
+    }
 
     return {
-      data: attributes.map((attribute: { id: string; key: string; type: string; filterable: boolean; translations?: Array<{ name: string }>; values?: Array<{ id: string; value: string; translations?: Array<{ label: string }> }> }) => {
+      data: attributes.map((attribute: { id: string; key: string; type: string; filterable: boolean; translations?: Array<{ name: string }>; values?: Array<{ id: string; value: string; translations?: Array<{ label: string }>; colors?: any; imageUrl?: string | null }> }) => {
         const translations = Array.isArray(attribute.translations) ? attribute.translations : [];
         const translation = translations[0] || null;
         const values = Array.isArray(attribute.values) ? attribute.values : [];

@@ -3,6 +3,12 @@
  * This fixes the error: "The column 'attribute_values.colors' does not exist"
  */
 
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import { db } from "../packages/db/client";
 
 async function addColumns() {
