@@ -5,6 +5,73 @@ import { ensureProductAttributesTable } from "../utils/db-ensure";
 
 class AdminService {
   /**
+   * Ensure colors and imageUrl columns exist in attribute_values table
+   * This is a runtime migration that runs automatically when needed
+   */
+  private async ensureColorsColumnsExist() {
+    try {
+      // Check if colors column exists
+      const colorsCheck = await db.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public'
+          AND table_name = 'attribute_values' 
+          AND column_name = 'colors'
+        ) as exists;
+      `) as Array<{ exists: boolean }>;
+
+      const colorsExists = colorsCheck[0]?.exists || false;
+
+      // Check if imageUrl column exists
+      const imageUrlCheck = await db.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public'
+          AND table_name = 'attribute_values' 
+          AND column_name = 'imageUrl'
+        ) as exists;
+      `) as Array<{ exists: boolean }>;
+
+      const imageUrlExists = imageUrlCheck[0]?.exists || false;
+
+      if (colorsExists && imageUrlExists) {
+        return; // Columns already exist
+      }
+
+      console.log('📝 [ADMIN SERVICE] Adding missing colors/imageUrl columns...');
+
+      // Add colors column if it doesn't exist
+      if (!colorsExists) {
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "attribute_values" ADD COLUMN IF NOT EXISTS "colors" JSONB DEFAULT '[]'::jsonb;
+        `);
+        console.log('✅ [ADMIN SERVICE] Added "colors" column');
+      }
+
+      // Add imageUrl column if it doesn't exist
+      if (!imageUrlExists) {
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "attribute_values" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+        `);
+        console.log('✅ [ADMIN SERVICE] Added "imageUrl" column');
+      }
+
+      // Create index if it doesn't exist
+      await db.$executeRawUnsafe(`
+        CREATE INDEX IF NOT EXISTS "attribute_values_colors_idx" 
+        ON "attribute_values" USING GIN ("colors");
+      `);
+
+      console.log('✅ [ADMIN SERVICE] Migration completed successfully!');
+    } catch (error: any) {
+      console.error('❌ [ADMIN SERVICE] Migration error:', error.message);
+      throw error; // Re-throw to handle in calling code
+    }
+  }
+
+  /**
    * Get dashboard stats
    */
   async getStats() {
@@ -2499,6 +2566,14 @@ class AdminService {
    * Get attributes for admin
    */
   async getAttributes() {
+    // Ensure colors and imageUrl columns exist (runtime migration)
+    try {
+      await this.ensureColorsColumnsExist();
+    } catch (migrationError: any) {
+      console.warn('⚠️ [ADMIN SERVICE] Migration check failed:', migrationError.message);
+      // Continue anyway - might already exist
+    }
+
     let attributes;
     try {
       attributes = await db.attribute.findMany({
@@ -2850,6 +2925,14 @@ class AdminService {
     }
   ) {
     console.log('✏️ [ADMIN SERVICE] Updating attribute value:', { attributeId, valueId, data });
+
+    // Ensure colors and imageUrl columns exist (runtime migration)
+    try {
+      await this.ensureColorsColumnsExist();
+    } catch (migrationError: any) {
+      console.warn('⚠️ [ADMIN SERVICE] Migration check failed:', migrationError.message);
+      // Continue anyway - might already exist
+    }
 
     const attributeValue = await db.attributeValue.findUnique({
       where: { id: valueId },
