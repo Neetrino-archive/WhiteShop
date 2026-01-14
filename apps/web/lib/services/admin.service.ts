@@ -1754,7 +1754,7 @@ class AdminService {
     const settings = await db.settings.findMany({
       where: {
         key: {
-          in: ['globalDiscount', 'categoryDiscounts', 'brandDiscounts'],
+          in: ['globalDiscount', 'categoryDiscounts', 'brandDiscounts', 'defaultCurrency'],
         },
       },
     });
@@ -1762,11 +1762,13 @@ class AdminService {
     const globalDiscountSetting = settings.find((s: { key: string; value: string }) => s.key === 'globalDiscount');
     const categoryDiscountsSetting = settings.find((s: { key: string; value: string }) => s.key === 'categoryDiscounts');
     const brandDiscountsSetting = settings.find((s: { key: string; value: string }) => s.key === 'brandDiscounts');
+    const defaultCurrencySetting = settings.find((s: { key: string; value: string }) => s.key === 'defaultCurrency');
     
     return {
       globalDiscount: globalDiscountSetting ? Number(globalDiscountSetting.value) : 0,
       categoryDiscounts: categoryDiscountsSetting ? (categoryDiscountsSetting.value as Record<string, number>) : {},
       brandDiscounts: brandDiscountsSetting ? (brandDiscountsSetting.value as Record<string, number>) : {},
+      defaultCurrency: defaultCurrencySetting ? (defaultCurrencySetting.value as string) : 'USD',
     };
   }
 
@@ -1826,6 +1828,24 @@ class AdminService {
         },
       });
       console.log('✅ [ADMIN SERVICE] Brand discounts updated:', data.brandDiscounts);
+    }
+    
+    // Update default currency
+    if (data.defaultCurrency !== undefined) {
+      const currencyValue = String(data.defaultCurrency);
+      await db.settings.upsert({
+        where: { key: 'defaultCurrency' },
+        update: {
+          value: currencyValue,
+          updatedAt: new Date(),
+        },
+        create: {
+          key: 'defaultCurrency',
+          value: currencyValue,
+          description: 'Default currency for admin product pricing (USD, AMD, EUR)',
+        },
+      });
+      console.log('✅ [ADMIN SERVICE] Default currency updated:', currencyValue);
     }
     
     return { success: true };

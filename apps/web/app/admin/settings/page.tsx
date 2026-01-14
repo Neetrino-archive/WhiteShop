@@ -8,6 +8,10 @@ import { apiClient } from '../../../lib/api-client';
 import { useTranslation } from '../../../lib/i18n-client';
 
 interface Settings {
+  defaultCurrency?: string;
+  globalDiscount?: number;
+  categoryDiscounts?: Record<string, number>;
+  brandDiscounts?: Record<string, number>;
 }
 
 export default function SettingsPage() {
@@ -16,7 +20,9 @@ export default function SettingsPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<Settings>({});
+  const [settings, setSettings] = useState<Settings>({
+    defaultCurrency: 'USD',
+  });
 
   useEffect(() => {
     if (!isLoading) {
@@ -38,12 +44,19 @@ export default function SettingsPage() {
       setLoading(true);
       console.log('⚙️ [ADMIN] Fetching settings...');
       const data = await apiClient.get<Settings>('/api/v1/admin/settings');
-      setSettings({});
+      setSettings({
+        defaultCurrency: data.defaultCurrency || 'USD',
+        globalDiscount: data.globalDiscount,
+        categoryDiscounts: data.categoryDiscounts,
+        brandDiscounts: data.brandDiscounts,
+      });
       console.log('✅ [ADMIN] Settings loaded:', data);
     } catch (err: any) {
       console.error('❌ [ADMIN] Error fetching settings:', err);
       // Use defaults if error
-      setSettings({});
+      setSettings({
+        defaultCurrency: 'USD',
+      });
     } finally {
       setLoading(false);
     }
@@ -54,7 +67,9 @@ export default function SettingsPage() {
     try {
       console.log('⚙️ [ADMIN] Saving settings...', settings);
 
-      await apiClient.put('/api/v1/admin/settings', {});
+      await apiClient.put('/api/v1/admin/settings', {
+        defaultCurrency: settings.defaultCurrency,
+      });
       
       alert(t('admin.settings.savedSuccess'));
       console.log('✅ [ADMIN] Settings saved');
@@ -133,7 +148,11 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('admin.settings.defaultCurrency')}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select 
+                value={settings.defaultCurrency || 'USD'}
+                onChange={(e) => setSettings({ ...settings, defaultCurrency: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="AMD">{t('admin.settings.amd')}</option>
                 <option value="USD">{t('admin.settings.usd')}</option>
                 <option value="EUR">{t('admin.settings.eur')}</option>

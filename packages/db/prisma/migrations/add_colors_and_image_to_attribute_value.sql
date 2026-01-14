@@ -18,3 +18,4 @@ CREATE INDEX IF NOT EXISTS "attribute_values_colors_idx" ON "attribute_values" U
 -- UPDATE "attribute_values" SET "colors" = '[]'::jsonb WHERE "colors" IS NULL;
 
 
+

@@ -8,6 +8,7 @@ import { Card, Button, Input } from '@shop/ui';
 import { apiClient } from '../../../../lib/api-client';
 import { getColorHex, COLOR_MAP } from '../../../../lib/colorMap';
 import { useTranslation } from '../../../../lib/i18n-client';
+import { convertPrice, CURRENCIES, type CurrencyCode } from '../../../../lib/currency';
 
 // Component for adding new color/size
 function NewColorSizeInput({ 
@@ -204,6 +205,8 @@ function AddProductPageContent() {
   const [sizeMessage, setSizeMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   // Track which attributes have been selected (have values added to them)
   const [selectedAttributesForProduct, setSelectedAttributesForProduct] = useState<Set<string>>(new Set());
+  // Default currency from settings
+  const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>('USD');
   
   // New Multi-Attribute Variant Builder state
   const [selectedAttributesForVariants, setSelectedAttributesForVariants] = useState<Set<string>>(new Set()); // Selected attribute IDs
@@ -245,6 +248,28 @@ function AddProductPageContent() {
     };
   }, [attributesDropdownOpen]);
 
+
+  // Load default currency from settings
+  useEffect(() => {
+    const loadDefaultCurrency = async () => {
+      try {
+        const settingsRes = await apiClient.get<{ defaultCurrency?: string }>('/api/v1/admin/settings');
+        const currency = (settingsRes.defaultCurrency || 'USD') as CurrencyCode;
+        if (currency in CURRENCIES) {
+          setDefaultCurrency(currency);
+          console.log('✅ [ADMIN] Default currency loaded:', currency);
+        }
+      } catch (err) {
+        console.error('❌ [ADMIN] Error loading default currency:', err);
+        // Use USD as default
+        setDefaultCurrency('USD');
+      }
+    };
+    
+    if (isLoggedIn && isAdmin) {
+      loadDefaultCurrency();
+    }
+  }, [isLoggedIn, isAdmin]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -485,13 +510,21 @@ function AddProductPageContent() {
               const defaultColorLabel = t('admin.products.add.defaultColor');
               
               if (!colorDataMap.has(defaultColor)) {
+                // Convert prices from USD (database) to defaultCurrency (display)
+                const priceInDefaultCurrency = variant.price !== undefined && variant.price !== null 
+                  ? convertPrice(variant.price, 'USD', defaultCurrency) 
+                  : 0;
+                const compareAtPriceInDefaultCurrency = variant.compareAtPrice !== undefined && variant.compareAtPrice !== null 
+                  ? convertPrice(variant.compareAtPrice, 'USD', defaultCurrency) 
+                  : 0;
+                
                 const colorData: ColorData = {
                   colorValue: defaultColor,
                   colorLabel: defaultColorLabel,
                   images: smartSplitUrls(variant.imageUrl),
                   stock: size ? '' : stockValue,
-                  price: variant.price !== undefined && variant.price !== null ? String(variant.price) : '',
-                  compareAtPrice: variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? String(variant.compareAtPrice) : '',
+                  price: variant.price !== undefined && variant.price !== null ? String(priceInDefaultCurrency) : '',
+                  compareAtPrice: variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? String(compareAtPriceInDefaultCurrency) : '',
                   sizes: [],
                   sizeStocks: {},
                   sizePrices: {},
@@ -504,10 +537,10 @@ function AddProductPageContent() {
                   colorData.sizes = [size];
                   colorData.sizeStocks = { [size]: stockValue };
                   if (variant.price !== undefined && variant.price !== null) {
-                    colorData.sizePrices![size] = String(variant.price);
+                    colorData.sizePrices![size] = String(priceInDefaultCurrency);
                   }
                   if (variant.compareAtPrice !== undefined && variant.compareAtPrice !== null) {
-                    colorData.sizeCompareAtPrices![size] = String(variant.compareAtPrice);
+                    colorData.sizeCompareAtPrices![size] = String(compareAtPriceInDefaultCurrency);
                   }
                 }
                 
@@ -538,11 +571,13 @@ function AddProductPageContent() {
                   existingColorData.sizeStocks[size] = stockValue;
                   if (!existingColorData.sizePrices) existingColorData.sizePrices = {};
                   if (variant.price !== undefined && variant.price !== null) {
-                    existingColorData.sizePrices[size] = String(variant.price);
+                    const priceInDefaultCurrency = convertPrice(variant.price, 'USD', defaultCurrency);
+                    existingColorData.sizePrices[size] = String(priceInDefaultCurrency);
                   }
                   if (!existingColorData.sizeCompareAtPrices) existingColorData.sizeCompareAtPrices = {};
                   if (variant.compareAtPrice !== undefined && variant.compareAtPrice !== null) {
-                    existingColorData.sizeCompareAtPrices[size] = String(variant.compareAtPrice);
+                    const compareAtPriceInDefaultCurrency = convertPrice(variant.compareAtPrice, 'USD', defaultCurrency);
+                    existingColorData.sizeCompareAtPrices[size] = String(compareAtPriceInDefaultCurrency);
                   }
                 } else {
                   const currentStockNum = parseInt(existingColorData.stock) || 0;
@@ -559,13 +594,21 @@ function AddProductPageContent() {
                   (color.charAt(0).toUpperCase() + color.slice(1).replace(/-/g, ' '));
                 
                 // Initialize color data with empty sizes
+                // Convert prices from USD (database) to defaultCurrency (display)
+                const priceInDefaultCurrency = variant.price !== undefined && variant.price !== null 
+                  ? convertPrice(variant.price, 'USD', defaultCurrency) 
+                  : 0;
+                const compareAtPriceInDefaultCurrency = variant.compareAtPrice !== undefined && variant.compareAtPrice !== null 
+                  ? convertPrice(variant.compareAtPrice, 'USD', defaultCurrency) 
+                  : 0;
+                
                 const colorData: ColorData = {
                   colorValue: color,
                   colorLabel: colorLabel,
                   images: smartSplitUrls(variant.imageUrl),
                   stock: size ? '' : stockValue, // Base stock only if no size
-                  price: variant.price !== undefined && variant.price !== null ? String(variant.price) : '',
-                  compareAtPrice: variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? String(variant.compareAtPrice) : '',
+                  price: variant.price !== undefined && variant.price !== null ? String(priceInDefaultCurrency) : '',
+                  compareAtPrice: variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? String(compareAtPriceInDefaultCurrency) : '',
                   sizes: [],
                   sizeStocks: {},
                   sizePrices: {},
@@ -578,13 +621,13 @@ function AddProductPageContent() {
                 if (size) {
                   colorData.sizes = [size];
                   colorData.sizeStocks = { [size]: stockValue };
-                  // Store size-specific price
+                  // Store size-specific price (converted to defaultCurrency)
                   if (variant.price !== undefined && variant.price !== null) {
-                    colorData.sizePrices![size] = String(variant.price);
+                    colorData.sizePrices![size] = String(priceInDefaultCurrency);
                   }
-                  // Store size-specific compareAtPrice
+                  // Store size-specific compareAtPrice (converted to defaultCurrency)
                   if (variant.compareAtPrice !== undefined && variant.compareAtPrice !== null) {
-                    colorData.sizeCompareAtPrices![size] = String(variant.compareAtPrice);
+                    colorData.sizeCompareAtPrices![size] = String(compareAtPriceInDefaultCurrency);
                   }
                   // Get size label if it's a custom size (not from attributes)
                   if (variant.sizeLabel) {
@@ -624,15 +667,17 @@ function AddProductPageContent() {
                   }
                   // Update stock for this size
                   existingColorData.sizeStocks[size] = stockValue;
-                  // Store size-specific price
+                  // Store size-specific price (converted to defaultCurrency)
                   if (!existingColorData.sizePrices) existingColorData.sizePrices = {};
                   if (variant.price !== undefined && variant.price !== null) {
-                    existingColorData.sizePrices[size] = String(variant.price);
+                    const priceInDefaultCurrency = convertPrice(variant.price, 'USD', defaultCurrency);
+                    existingColorData.sizePrices[size] = String(priceInDefaultCurrency);
                   }
-                  // Store size-specific compareAtPrice
+                  // Store size-specific compareAtPrice (converted to defaultCurrency)
                   if (!existingColorData.sizeCompareAtPrices) existingColorData.sizeCompareAtPrices = {};
                   if (variant.compareAtPrice !== undefined && variant.compareAtPrice !== null) {
-                    existingColorData.sizeCompareAtPrices[size] = String(variant.compareAtPrice);
+                    const compareAtPriceInDefaultCurrency = convertPrice(variant.compareAtPrice, 'USD', defaultCurrency);
+                    existingColorData.sizeCompareAtPrices[size] = String(compareAtPriceInDefaultCurrency);
                   }
                   // Update size label if available
                   if (variant.sizeLabel) {
@@ -653,10 +698,12 @@ function AddProductPageContent() {
               }
             }
             
-            // Use first variant's price, compareAtPrice, sku as defaults
+            // Use first variant's price, compareAtPrice, sku as defaults (converted to defaultCurrency)
             if (index === 0) {
-              firstPrice = variant.price !== undefined && variant.price !== null ? String(variant.price) : '';
-              firstCompareAtPrice = variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? String(variant.compareAtPrice) : '';
+              const firstPriceUSD = variant.price !== undefined && variant.price !== null ? variant.price : 0;
+              const firstCompareAtPriceUSD = variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? variant.compareAtPrice : 0;
+              firstPrice = firstPriceUSD > 0 ? String(convertPrice(firstPriceUSD, 'USD', defaultCurrency)) : '';
+              firstCompareAtPrice = firstCompareAtPriceUSD > 0 ? String(convertPrice(firstCompareAtPriceUSD, 'USD', defaultCurrency)) : '';
               firstSku = variant.sku || '';
             }
           });
@@ -2296,13 +2343,15 @@ function AddProductPageContent() {
       const variantSkuSet = new Set<string>(); // Track SKUs during variant creation
       
       formData.variants.forEach((variant, variantIndex) => {
+        // Convert prices from defaultCurrency to USD (database stores prices in USD)
+        const variantPriceUSD = convertPrice(parseFloat(variant.price || '0'), defaultCurrency, 'USD');
         const baseVariantData: any = {
-          price: parseFloat(variant.price || '0'),
+          price: variantPriceUSD,
           published: true,
         };
 
         if (variant.compareAtPrice) {
-          baseVariantData.compareAtPrice = parseFloat(variant.compareAtPrice);
+          baseVariantData.compareAtPrice = convertPrice(parseFloat(variant.compareAtPrice), defaultCurrency, 'USD');
         }
 
         // Получаем цвета из новой структуры ColorData
@@ -2355,20 +2404,24 @@ function AddProductPageContent() {
                 : undefined;
               
               // Используем цену размера, если указана, иначе цену цвета, иначе цену варианта
+              // Convert from defaultCurrency to USD
               const sizePrice = colorData.sizePrices?.[size];
-              const finalPrice = sizePrice && sizePrice.trim() !== ''
+              const finalPriceRaw = sizePrice && sizePrice.trim() !== ''
                 ? parseFloat(sizePrice)
                 : (colorData.price && colorData.price.trim() !== '' 
                   ? parseFloat(colorData.price) 
                   : baseVariantData.price);
+              const finalPrice = convertPrice(finalPriceRaw, defaultCurrency, 'USD');
               
               // Используем compareAtPrice размера, если указана, иначе compareAtPrice цвета, иначе compareAtPrice варианта
+              // Convert from defaultCurrency to USD
               const sizeCompareAtPrice = colorData.sizeCompareAtPrices?.[size];
-              const finalCompareAtPrice = sizeCompareAtPrice && sizeCompareAtPrice.trim() !== ''
+              const finalCompareAtPriceRaw = sizeCompareAtPrice && sizeCompareAtPrice.trim() !== ''
                 ? parseFloat(sizeCompareAtPrice)
                 : (colorData.compareAtPrice && colorData.compareAtPrice.trim() !== ''
                   ? parseFloat(colorData.compareAtPrice)
                   : baseVariantData.compareAtPrice);
+              const finalCompareAtPrice = finalCompareAtPriceRaw ? convertPrice(finalCompareAtPriceRaw, defaultCurrency, 'USD') : undefined;
               
               // Collect all attribute options for this variant
               const variantOptions: Array<{ attributeKey: string; value: string; valueId?: string }> = [];
@@ -2460,14 +2513,17 @@ function AddProductPageContent() {
 
             // Используем цену цвета, если указана, иначе цену варианта
             // For empty colors (non-color attributes), always use variant base price
+            // Convert from defaultCurrency to USD
             const hasColor = colorData.colorValue && colorData.colorValue.trim() !== '';
-            const finalPrice = hasColor && colorData.price && colorData.price.trim() !== '' 
+            const finalPriceRaw = hasColor && colorData.price && colorData.price.trim() !== '' 
               ? parseFloat(colorData.price) 
               : baseVariantData.price;
+            const finalPrice = convertPrice(finalPriceRaw, defaultCurrency, 'USD');
 
-            const finalCompareAtPrice = hasColor && colorData.compareAtPrice && colorData.compareAtPrice.trim() !== ''
+            const finalCompareAtPriceRaw = hasColor && colorData.compareAtPrice && colorData.compareAtPrice.trim() !== ''
               ? parseFloat(colorData.compareAtPrice)
               : baseVariantData.compareAtPrice;
+            const finalCompareAtPrice = finalCompareAtPriceRaw ? convertPrice(finalCompareAtPriceRaw, defaultCurrency, 'USD') : undefined;
 
             // Collect all attribute options for this variant
             const variantOptions: Array<{ attributeKey: string; value: string; valueId?: string }> = [];
@@ -3672,34 +3728,40 @@ function AddProductPageContent() {
                                   );
                                 })}
                                 <td className="px-2 py-2 whitespace-nowrap">
-                                  <Input
-                                    type="number"
-                                    value={variant.price}
-                                    onChange={(e) => {
-                                      setGeneratedVariants(prev => prev.map(v => 
-                                        v.id === variant.id ? { ...v, price: e.target.value } : v
-                                      ));
-                                    }}
-                                    placeholder="0.00"
-                                    className="w-20 text-xs"
-                                    min="0"
-                                    step="0.01"
-                                  />
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      value={variant.price}
+                                      onChange={(e) => {
+                                        setGeneratedVariants(prev => prev.map(v => 
+                                          v.id === variant.id ? { ...v, price: e.target.value } : v
+                                        ));
+                                      }}
+                                      placeholder="0.00"
+                                      className="w-20 text-xs"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                    <span className="text-xs text-gray-500">{CURRENCIES[defaultCurrency].symbol}</span>
+                                  </div>
                                 </td>
                                 <td className="px-2 py-2 whitespace-nowrap">
-                                  <Input
-                                    type="number"
-                                    value={variant.compareAtPrice}
-                                    onChange={(e) => {
-                                      setGeneratedVariants(prev => prev.map(v => 
-                                        v.id === variant.id ? { ...v, compareAtPrice: e.target.value } : v
-                                      ));
-                                    }}
-                                    placeholder="0.00"
-                                    className="w-20 text-xs"
-                                    min="0"
-                                    step="0.01"
-                                  />
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      value={variant.compareAtPrice}
+                                      onChange={(e) => {
+                                        setGeneratedVariants(prev => prev.map(v => 
+                                          v.id === variant.id ? { ...v, compareAtPrice: e.target.value } : v
+                                        ));
+                                      }}
+                                      placeholder="0.00"
+                                      className="w-20 text-xs"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                    <span className="text-xs text-gray-500">{CURRENCIES[defaultCurrency].symbol}</span>
+                                  </div>
                                 </td>
                                 <td className="px-2 py-2 whitespace-nowrap">
                                   <Input
