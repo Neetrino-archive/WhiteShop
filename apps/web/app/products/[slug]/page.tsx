@@ -232,8 +232,6 @@ export default function ProductPage({ params }: ProductPageProps) {
             // This ensures attribute value images don't appear in the main gallery
             if (!isAttributeValueImage(url)) {
               allRawImages.push(url);
-            } else {
-              console.log('🚫 [PRODUCT PAGE] Excluding variant image (matches attribute value image):', url);
             }
           });
         }
@@ -247,7 +245,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     // Final filter: remove any attribute value images that might have been added
     const filteredImages = processedImages.filter(url => {
       if (isAttributeValueImage(url)) {
-        console.log('🚫 [PRODUCT PAGE] Filtering out attribute value image from gallery:', url);
         return false;
       }
       return true;
@@ -301,7 +298,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       } catch (error: any) {
         // If 404 and not English, try fallback to English
         if (error?.status === 404 && currentLang !== 'en') {
-          console.warn(`[PRODUCT PAGE] Product not found in ${currentLang}, trying English fallback`);
           try {
             data = await apiClient.get<Product>(`/api/v1/products/${slug}`, {
               params: { lang: 'en' }
@@ -334,11 +330,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         if (sizeOption) setSelectedSize(sizeOption.value);
       }
     } catch (error: any) {
-      console.error('[PRODUCT PAGE] Error fetching product:', error);
-      
       // If product not found (404), clear product state and show error
       if (error?.status === 404) {
-        console.warn(`[PRODUCT PAGE] Product '${slug}' not found or not published`);
         setProduct(null);
         // Optionally redirect to 404 page or show error message
         // router.push('/404');
@@ -423,16 +416,10 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     const loadReviews = async () => {
       try {
-        console.log('📝 [PRODUCT PAGE] Loading reviews for product slug:', slug);
         const data = await apiClient.get<Array<{ rating: number }>>(`/api/v1/products/${slug}/reviews`);
-        console.log('✅ [PRODUCT PAGE] Reviews loaded:', data?.length || 0);
         setReviews(data || []);
       } catch (error: any) {
-        console.error('❌ [PRODUCT PAGE] Error loading reviews:', error);
         // If 404, product might not have reviews yet - that's okay
-        if (error.status !== 404) {
-          console.error('Failed to load reviews:', error);
-        }
         setReviews([]);
       }
     };
@@ -588,21 +575,12 @@ export default function ProductPage({ params }: ProductPageProps) {
     // 1. Try to find exact match with all attributes
     const exactMatch = product.variants.find(v => variantMatches(v) && v.imageUrl);
     if (exactMatch) {
-      console.log('✅ [PRODUCT PAGE] Found exact variant match:', {
-        variantId: exactMatch.id,
-        attributes: Array.from(allSelectedAttributes.entries()),
-        hasImage: !!exactMatch.imageUrl
-      });
       return exactMatch;
     }
 
     // 2. Try to find any match (even without image) with all attributes
     const anyMatch = product.variants.find(v => variantMatches(v));
     if (anyMatch) {
-      console.log('✅ [PRODUCT PAGE] Found variant match (no image):', {
-        variantId: anyMatch.id,
-        attributes: Array.from(allSelectedAttributes.entries())
-      });
       return anyMatch;
     }
 
@@ -623,23 +601,11 @@ export default function ProductPage({ params }: ProductPageProps) {
    */
   const switchToVariantImage = useCallback((variant: ProductVariant | null) => {
     if (!variant || !variant.imageUrl || !product) {
-      console.log('⚠️ [PRODUCT PAGE] Cannot switch image - missing variant or imageUrl:', {
-        hasVariant: !!variant,
-        hasImageUrl: variant ? !!variant.imageUrl : false,
-        hasProduct: !!product
-      });
       return;
     }
 
-    console.log('🖼️ [PRODUCT PAGE] Switching to variant image:', {
-      variantId: variant.id,
-      imageUrl: variant.imageUrl,
-      imagesCount: images.length
-    });
-
     const splitUrls = smartSplitUrls(variant.imageUrl);
     if (splitUrls.length === 0) {
-      console.warn('⚠️ [PRODUCT PAGE] No URLs found in variant imageUrl');
       return;
     }
 
@@ -679,14 +645,12 @@ export default function ProductPage({ params }: ProductPageProps) {
     for (const url of splitUrls) {
       const processedUrl = processImageUrl(url);
       if (!processedUrl) {
-        console.log('⚠️ [PRODUCT PAGE] Failed to process URL:', url);
         continue;
       }
 
       // If this variant image is an attribute value image, skip it
       // (attribute value images are not in the gallery, so we can't switch to them)
       if (isAttributeValueImage(processedUrl)) {
-        console.log('ℹ️ [PRODUCT PAGE] Variant image matches attribute value image (excluded from gallery):', processedUrl);
         continue;
       }
 
@@ -717,10 +681,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       });
 
       if (imageIndex !== -1) {
-        console.log('✅ [PRODUCT PAGE] Found variant image at index:', imageIndex, {
-          imageUrl: images[imageIndex],
-          variantImageUrl: processedUrl
-        });
         setCurrentImageIndex(imageIndex);
         
         // Update thumbnail scroll if needed
@@ -731,15 +691,6 @@ export default function ProductPage({ params }: ProductPageProps) {
         return;
       }
     }
-
-    // If variant image not found in images array, log detailed info for debugging
-    console.log('ℹ️ [PRODUCT PAGE] Variant image not found in images array (may be excluded as attribute value image)', {
-      variantId: variant.id,
-      variantImageUrls: splitUrls,
-      processedUrls: splitUrls.map(processImageUrl).filter(Boolean),
-      availableImages: images.slice(0, 5), // Show first 5 for debugging
-      totalImages: images.length
-    });
   }, [images, processImageUrl, smartSplitUrls, thumbnailStartIndex, thumbnailsPerView, product]);
 
   useEffect(() => {
@@ -748,17 +699,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       const newVariant = findVariantByAllAttributes(selectedColor, selectedSize, selectedAttributeValues);
       
       if (newVariant && newVariant.id !== selectedVariant?.id) {
-        console.log('🔄 [PRODUCT PAGE] Variant changed:', {
-          from: selectedVariant?.id,
-          to: newVariant.id,
-          color: selectedColor,
-          size: selectedSize,
-          otherAttributes: Array.from(selectedAttributeValues.entries()),
-          price: newVariant.price,
-          stock: newVariant.stock,
-          sku: newVariant.sku,
-          hasImage: !!newVariant.imageUrl
-        });
         setSelectedVariant(newVariant);
         
         // Switch to variant's image if it exists
@@ -853,28 +793,6 @@ export default function ProductPage({ params }: ProductPageProps) {
             v.label?.toLowerCase() === item.label?.toLowerCase() ||
             v.label === item.label
           );
-        }
-        
-        // Debug logging for material attribute
-        if (productAttr.attribute.key === 'material') {
-          console.log('🔍 [PRODUCT PAGE] Material attribute value lookup:', {
-            attributeKey: productAttr.attribute.key,
-            itemValueId: item.valueId,
-            itemValue: item.value,
-            itemLabel: item.label,
-            foundAttrValue: attrValue ? {
-              id: attrValue.id,
-              value: attrValue.value,
-              label: attrValue.label,
-              imageUrl: attrValue.imageUrl
-            } : null,
-            allAttributeValues: productAttr.attribute.values?.map((v: any) => ({
-              id: v.id,
-              value: v.value,
-              label: v.label,
-              imageUrl: v.imageUrl
-            })) || []
-          });
         }
         
         return {
@@ -973,7 +891,6 @@ export default function ProductPage({ params }: ProductPageProps) {
             });
             
             attributeGroups.set(attrKey, groups);
-            console.log('✅ [PRODUCT PAGE] Added attribute from variants:', attrKey, groups);
           }
         }
       });
@@ -1046,7 +963,6 @@ export default function ProductPage({ params }: ProductPageProps) {
           imageUrl: null,
           colors: null,
         })));
-        console.log('✅ [PRODUCT PAGE] Added attribute from old format:', attrKey);
       });
     }
   }
@@ -1070,20 +986,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       stock: g.stock,
       variants: g.variants,
     })));
-  }
-
-  // Debug logging for stock display - only log when product is loaded
-  if (product && product.id) {
-    console.log('📦 [PRODUCT PAGE] Stock information:', {
-      productId: product.id,
-      productSlug: product.slug,
-      colorGroups: colorGroups.map(g => ({ color: g.color, stock: g.stock })),
-      sizeGroups: sizeGroups.map(g => ({ size: g.size, stock: g.stock })),
-      attributeGroups: Array.from(attributeGroups.entries()).map(([key, groups]) => ({
-        key,
-        groups: groups.map(g => ({ value: g.value, stock: g.stock })),
-      })),
-    });
   }
 
   const currentVariant = selectedVariant || findVariantByColorAndSize(selectedColor, selectedSize) || product?.variants?.[0] || null;
@@ -1173,7 +1075,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       }
       setTimeout(() => setShowMessage(null), 2000);
       window.dispatchEvent(new Event('wishlist-updated'));
-    } catch (err) { console.error(err); }
+    } catch (err) { }
   };
 
   const handleCompareToggle = (e: MouseEvent) => {
@@ -1197,7 +1099,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       }
       setTimeout(() => setShowMessage(null), 2000);
       window.dispatchEvent(new Event('compare-updated'));
-    } catch (err) { console.error(err); }
+    } catch (err) { }
   };
 
   if (loading || !product) return <div className="max-w-7xl mx-auto px-4 py-16 text-center">{t(language, 'common.messages.loading')}</div>;
@@ -1558,18 +1460,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                             ? 'gap-1' 
                             : 'gap-2';
 
-                          // Debug logging for material attribute
-                          if (attrKey === 'material' && g.imageUrl) {
-                            console.log('🖼️ [PRODUCT PAGE] Material attribute image:', {
-                              attributeKey: attrKey,
-                              valueId: g.valueId,
-                              value: g.value,
-                              label: g.label,
-                              imageUrl: g.imageUrl,
-                              hasImage: hasImage
-                            });
-                          }
-
                           return (
                             <button
                               key={g.valueId || g.value}
@@ -1599,7 +1489,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                                   alt={g.label}
                                   className={`${imageSizeClass} object-cover rounded border border-gray-300 flex-shrink-0`}
                                   onError={(e) => {
-                                    console.error('❌ [PRODUCT PAGE] Failed to load attribute image:', g.imageUrl);
                                     (e.target as HTMLImageElement).style.display = 'none';
                                   }}
                                 />
