@@ -29,7 +29,7 @@ interface Product {
   originalPrice?: number | null;
   globalDiscount?: number | null;
   discountPercent?: number | null;
-  colors?: string[]; // Available colors from variants
+  colors?: Array<{ value: string; imageUrl?: string | null; colors?: string[] | null }>; // Available colors from variants with imageUrl and colors hex
 }
 
 type ViewMode = 'list' | 'grid-2' | 'grid-3';
@@ -457,16 +457,37 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
             {/* Available Colors */}
             {product.colors && product.colors.length > 0 && (
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {product.colors.slice(0, 6).map((color, index) => {
-                  const colorHex = getColorHex(color);
+                {product.colors.slice(0, 6).map((colorData, index) => {
+                  const colorValue = typeof colorData === 'string' ? colorData : colorData.value;
+                  const imageUrl = typeof colorData === 'object' ? colorData.imageUrl : null;
+                  const colorsHex = typeof colorData === 'object' ? colorData.colors : null;
+                  
+                  // Determine color hex: use colorsHex[0] if available, otherwise use getColorHex
+                  const colorHex = colorsHex && Array.isArray(colorsHex) && colorsHex.length > 0 
+                    ? colorsHex[0] 
+                    : getColorHex(colorValue);
+                  
                   return (
                     <div
                       key={index}
-                      className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0"
-                      style={{ backgroundColor: colorHex }}
-                      title={color}
-                      aria-label={`Color: ${color}`}
-                    />
+                      className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0 overflow-hidden"
+                      style={imageUrl ? {} : { backgroundColor: colorHex }}
+                      title={colorValue}
+                      aria-label={`Color: ${colorValue}`}
+                    >
+                      {imageUrl ? (
+                        <img 
+                          src={imageUrl} 
+                          alt={colorValue}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback to color hex if image fails to load
+                            (e.target as HTMLImageElement).style.backgroundColor = colorHex;
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                    </div>
                   );
                 })}
                 {product.colors.length > 6 && (
@@ -651,16 +672,37 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
         {/* Available Colors */}
         {product.colors && product.colors.length > 0 && (
           <div className={`flex items-center gap-1.5 ${isCompact ? 'mb-1' : 'mb-2'} flex-wrap`}>
-            {product.colors.slice(0, 6).map((color, index) => {
-              const colorHex = getColorHex(color);
+            {product.colors.slice(0, 6).map((colorData, index) => {
+              const colorValue = typeof colorData === 'string' ? colorData : colorData.value;
+              const imageUrl = typeof colorData === 'object' ? colorData.imageUrl : null;
+              const colorsHex = typeof colorData === 'object' ? colorData.colors : null;
+              
+              // Determine color hex: use colorsHex[0] if available, otherwise use getColorHex
+              const colorHex = colorsHex && Array.isArray(colorsHex) && colorsHex.length > 0 
+                ? colorsHex[0] 
+                : getColorHex(colorValue);
+              
               return (
                 <div
                   key={index}
-                  className={`${isCompact ? 'w-4 h-4' : 'w-5 h-5'} rounded-full border border-gray-300 flex-shrink-0`}
-                  style={{ backgroundColor: colorHex }}
-                  title={color}
-                  aria-label={t('common.ariaLabels.color').replace('{color}', color)}
-                />
+                  className={`${isCompact ? 'w-4 h-4' : 'w-5 h-5'} rounded-full border border-gray-300 flex-shrink-0 overflow-hidden`}
+                  style={imageUrl ? {} : { backgroundColor: colorHex }}
+                  title={colorValue}
+                  aria-label={t('common.ariaLabels.color').replace('{color}', colorValue)}
+                >
+                  {imageUrl ? (
+                    <img 
+                      src={imageUrl} 
+                      alt={colorValue}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to color hex if image fails to load
+                        (e.target as HTMLImageElement).style.backgroundColor = colorHex;
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                </div>
               );
             })}
             {product.colors.length > 6 && (

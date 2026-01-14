@@ -651,8 +651,8 @@ class ProductsService {
         ? variants.sort((a: { price: number }, b: { price: number }) => a.price - b.price)[0]
         : null;
 
-      // Get all unique colors from variants (support both new and old format)
-      const colorSet = new Set<string>();
+      // Get all unique colors from variants with imageUrl and colors hex (support both new and old format)
+      const colorMap = new Map<string, { value: string; imageUrl?: string | null; colors?: string[] | null }>();
       variants.forEach((v: any) => {
         const options = Array.isArray(v.options) ? v.options : [];
         const colorOption = options.find((opt: any) => {
@@ -664,32 +664,60 @@ class ProductsService {
         });
         if (colorOption) {
           let colorValue = "";
+          let imageUrl: string | null | undefined = null;
+          let colorsHex: string[] | null | undefined = null;
+          
           if (colorOption.attributeValue) {
             // New format: get from translation or value
             const translation = colorOption.attributeValue.translations?.find((t: { locale: string }) => t.locale === lang) || colorOption.attributeValue.translations?.[0];
             colorValue = translation?.label || colorOption.attributeValue.value || "";
-            console.log('🎨 [PRODUCTS SERVICE] Found color from AttributeValue:', { 
-              valueId: colorOption.attributeValue.id, 
-              value: colorOption.attributeValue.value, 
-              label: translation?.label,
-              finalColor: colorValue 
-            });
+            // Get imageUrl and colors from AttributeValue
+            imageUrl = colorOption.attributeValue.imageUrl || null;
+            colorsHex = colorOption.attributeValue.colors || null;
           } else {
             // Old format: use value directly
             colorValue = colorOption.value || "";
-            console.log('🎨 [PRODUCTS SERVICE] Found color from old format:', { value: colorValue });
           }
+          
           if (colorValue) {
-            colorSet.add(colorValue.trim().toLowerCase());
+            const normalizedValue = colorValue.trim().toLowerCase();
+            // Store color with imageUrl and colors hex if not already stored or if we have better data
+            if (!colorMap.has(normalizedValue) || (imageUrl && !colorMap.get(normalizedValue)?.imageUrl)) {
+              colorMap.set(normalizedValue, {
+                value: colorValue.trim(),
+                imageUrl: imageUrl || null,
+                colors: colorsHex || null,
+              });
+            }
           }
         }
       });
-      const availableColors = Array.from(colorSet);
-      console.log('🎨 [PRODUCTS SERVICE] Available colors for product:', { 
-        productId: product.id, 
-        colors: availableColors,
-        productAttributes: (product as any).productAttributes?.length || 0 
-      });
+      
+      // Also check productAttributes for color attribute values with imageUrl and colors
+      if ((product as any).productAttributes && Array.isArray((product as any).productAttributes)) {
+        (product as any).productAttributes.forEach((productAttr: any) => {
+          if (productAttr.attribute?.key === 'color' && productAttr.attribute?.values) {
+            productAttr.attribute.values.forEach((attrValue: any) => {
+              const translation = attrValue.translations?.find((t: { locale: string }) => t.locale === lang) || attrValue.translations?.[0];
+              const colorValue = translation?.label || attrValue.value || "";
+              if (colorValue) {
+                const normalizedValue = colorValue.trim().toLowerCase();
+                // Update if we have imageUrl or colors hex
+                if (attrValue.imageUrl || attrValue.colors) {
+                  const existing = colorMap.get(normalizedValue);
+                  colorMap.set(normalizedValue, {
+                    value: colorValue.trim(),
+                    imageUrl: attrValue.imageUrl || existing?.imageUrl || null,
+                    colors: attrValue.colors || existing?.colors || null,
+                  });
+                }
+              }
+            });
+          }
+        });
+      }
+      
+      const availableColors = Array.from(colorMap.values());
 
       const originalPrice = variant?.price || 0;
       let finalPrice = originalPrice;
