@@ -2980,6 +2980,105 @@ class AdminService {
   }
 
   /**
+   * Update attribute translation (name)
+   */
+  async updateAttributeTranslation(
+    attributeId: string,
+    data: {
+      name: string;
+      locale?: string;
+    }
+  ) {
+    console.log('✏️ [ADMIN SERVICE] Updating attribute translation:', { attributeId, name: data.name });
+
+    const attribute = await db.attribute.findUnique({
+      where: { id: attributeId },
+      include: {
+        translations: {
+          where: { locale: data.locale || "en" },
+        },
+      },
+    });
+
+    if (!attribute) {
+      throw {
+        status: 404,
+        type: "https://api.shop.am/problems/not-found",
+        title: "Attribute not found",
+        detail: `Attribute with id '${attributeId}' does not exist`,
+      };
+    }
+
+    const locale = data.locale || "en";
+
+    // Use upsert to handle both create and update cases
+    await db.attributeTranslation.upsert({
+      where: {
+        attributeId_locale: {
+          attributeId,
+          locale,
+        },
+      },
+      update: {
+        name: data.name.trim(),
+      },
+      create: {
+        attributeId,
+        locale,
+        name: data.name.trim(),
+      },
+    });
+
+    // Return updated attribute with all values
+    const updatedAttribute = await db.attribute.findUnique({
+      where: { id: attributeId },
+      include: {
+        translations: {
+          where: { locale },
+        },
+        values: {
+          include: {
+            translations: {
+              where: { locale },
+            },
+          },
+          orderBy: { position: "asc" },
+        },
+      },
+    });
+
+    if (!updatedAttribute) {
+      throw {
+        status: 500,
+        type: "https://api.shop.am/problems/internal-error",
+        title: "Internal Server Error",
+        detail: "Failed to retrieve updated attribute",
+      };
+    }
+
+    const translation = updatedAttribute.translations[0];
+    const values = updatedAttribute.values || [];
+
+    return {
+      id: updatedAttribute.id,
+      key: updatedAttribute.key,
+      name: translation?.name || updatedAttribute.key,
+      type: updatedAttribute.type,
+      filterable: updatedAttribute.filterable,
+      values: values.map((val: any) => {
+        const valTranslation = val.translations?.[0];
+        return {
+          id: val.id,
+          value: val.value,
+          label: valTranslation?.label || val.value,
+          colors: Array.isArray(val.colors) ? val.colors : (val.colors ? JSON.parse(val.colors as string) : []),
+          imageUrl: val.imageUrl || null,
+        };
+      }),
+    };
+  }
+
+  /**
    * Add attribute value
    */
   async addAttributeValue(attributeId: string, data: { label: string; locale?: string }) {

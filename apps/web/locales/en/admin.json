@@ -135,6 +135,10 @@
     "failedToAddValue": "Failed to add value",
     "attributeNotFound": "Attribute not found",
     "configureValue": "Configure",
+    "editAttribute": "Edit attribute",
+    "nameUpdatedSuccess": "Attribute name updated successfully",
+    "saving": "Saving...",
+    "save": "Save",
     "valueModal": {
       "editValue": "Edit Value",
       "label": "Label",

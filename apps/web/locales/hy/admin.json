@@ -135,6 +135,10 @@
     "failedToAddValue": "Չհաջողվեց ավելացնել արժեքը",
     "attributeNotFound": "Ատրիբուտը չի գտնվել",
     "configureValue": "Կոնֆիգուրացիա",
+    "editAttribute": "Խմբագրել ատրիբուտ",
+    "nameUpdatedSuccess": "Ատրիբուտի անվանումը հաջողությամբ թարմացվեց",
+    "saving": "Պահվում է...",
+    "save": "Պահել",
     "valueModal": {
       "editValue": "Խմբագրել արժեք",
       "label": "Անվանում",
