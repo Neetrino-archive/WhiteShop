@@ -180,6 +180,10 @@ export default function ProductPage({ params }: ProductPageProps) {
   const images = useMemo(() => {
     if (!product) return [];
     
+    console.log('🖼️ [PRODUCT IMAGES] Building images array for product:', product.id);
+    console.log('🖼️ [PRODUCT IMAGES] product.media:', product.media);
+    console.log('🖼️ [PRODUCT IMAGES] product.media type:', typeof product.media, Array.isArray(product.media));
+    
     // First, collect all attribute value imageUrls to exclude them from product images
     // Attribute value images should NOT appear in the main gallery
     const attributeValueImageUrls = new Set<string>();
@@ -218,8 +222,82 @@ export default function ProductPage({ params }: ProductPageProps) {
     };
     
     const allRawImages: any[] = [];
-    // 1. Add general product media first
-    if (product.media) allRawImages.push(...product.media);
+    
+    // 1. Add general product media first (main product images)
+    if (product.media) {
+      console.log('🖼️ [PRODUCT IMAGES] Processing product.media, type:', typeof product.media, 'isArray:', Array.isArray(product.media));
+      
+      if (Array.isArray(product.media)) {
+        console.log('🖼️ [PRODUCT IMAGES] Processing product.media array, length:', product.media.length);
+        product.media.forEach((mediaItem, index) => {
+          console.log(`🖼️ [PRODUCT IMAGES] mediaItem[${index}]:`, mediaItem, 'type:', typeof mediaItem);
+          
+          if (typeof mediaItem === 'string') {
+            // Handle string items - could be single URL or comma-separated
+            if (mediaItem.includes(',')) {
+              // Comma-separated URLs
+              const urls = smartSplitUrls(mediaItem);
+              urls.forEach(url => {
+                if (url.trim()) {
+                  console.log(`🖼️ [PRODUCT IMAGES] Adding comma-separated URL:`, url);
+                  allRawImages.push(url.trim());
+                }
+              });
+            } else {
+              console.log(`🖼️ [PRODUCT IMAGES] Adding string media item:`, mediaItem);
+              allRawImages.push(mediaItem);
+            }
+          } else if (mediaItem && typeof mediaItem === 'object') {
+            // Handle object items
+            const url = (mediaItem as any).url || (mediaItem as any).src || (mediaItem as any).value || '';
+            console.log(`🖼️ [PRODUCT IMAGES] Processing object media item, url:`, url);
+            if (url) {
+              if (typeof url === 'string' && url.includes(',')) {
+                // Comma-separated URLs in object
+                const urls = smartSplitUrls(url);
+                urls.forEach(u => {
+                  if (u.trim()) {
+                    allRawImages.push(u.trim());
+                  }
+                });
+              } else {
+                allRawImages.push(url);
+              }
+            }
+          }
+        });
+      } else if (typeof product.media === 'string') {
+        // Handle single string (could be comma-separated)
+        console.log('🖼️ [PRODUCT IMAGES] Processing single string media:', product.media);
+        if (product.media.includes(',')) {
+          const urls = smartSplitUrls(product.media);
+          urls.forEach(url => {
+            if (url.trim()) {
+              console.log('🖼️ [PRODUCT IMAGES] Adding comma-separated URL:', url);
+              allRawImages.push(url.trim());
+            }
+          });
+        } else {
+          allRawImages.push(product.media);
+        }
+      } else if (typeof product.media === 'object') {
+        // Handle single object
+        console.log('🖼️ [PRODUCT IMAGES] Processing single object media');
+        const url = (product.media as any).url || (product.media as any).src || (product.media as any).value || '';
+        if (url) {
+          if (typeof url === 'string' && url.includes(',')) {
+            const urls = smartSplitUrls(url);
+            urls.forEach(u => {
+              if (u.trim()) {
+                allRawImages.push(u.trim());
+              }
+            });
+          } else {
+            allRawImages.push(url);
+          }
+        }
+      }
+    }
     
     // 2. Add variant images, but EXCLUDE those that match attribute value images
     // Variant images that are the same as attribute value images should NOT appear in gallery
@@ -238,9 +316,13 @@ export default function ProductPage({ params }: ProductPageProps) {
       });
     }
 
+    console.log('🖼️ [PRODUCT IMAGES] allRawImages before processing:', allRawImages);
+    
     const processedImages = allRawImages
       .map(processImageUrl)
       .filter((url): url is string => url !== null);
+    
+    console.log('🖼️ [PRODUCT IMAGES] processedImages:', processedImages);
     
     // Final filter: remove any attribute value images that might have been added
     const filteredImages = processedImages.filter(url => {
@@ -250,8 +332,13 @@ export default function ProductPage({ params }: ProductPageProps) {
       return true;
     });
     
+    console.log('🖼️ [PRODUCT IMAGES] filteredImages (final):', filteredImages);
+    
     // Return all unique images (attribute value images are excluded)
-    return Array.from(new Set(filteredImages));
+    // Ensure product main images come first
+    const finalImages = Array.from(new Set(filteredImages));
+    console.log('🖼️ [PRODUCT IMAGES] Final images array:', finalImages);
+    return finalImages;
   }, [product, processImageUrl, smartSplitUrls]);
 
   // Helper function to get color hex/rgb from color name
@@ -723,142 +810,251 @@ export default function ProductPage({ params }: ProductPageProps) {
   }, [selectedColor, selectedSize, selectedAttributeValues, findVariantByAllAttributes, switchToVariantImage, selectedVariant?.id, product, getOptionValue]);
 
   // Build attribute groups from productAttributes (new format) or from variants (old format)
-  const attributeGroups = new Map<string, Array<{
-    valueId?: string;
-    value: string;
-    label: string;
-    stock: number;
-    variants: ProductVariant[];
-    imageUrl?: string | null;
-    colors?: string[] | null;
-  }>>();
+  // This useMemo ensures attribute groups are recalculated when product or selectedVariant changes
+  const attributeGroups = useMemo(() => {
+    const groups = new Map<string, Array<{
+      valueId?: string;
+      value: string;
+      label: string;
+      stock: number;
+      variants: ProductVariant[];
+      imageUrl?: string | null;
+      colors?: string[] | null;
+    }>>();
 
-  if (product?.productAttributes && product.productAttributes.length > 0) {
-    // New format: Use productAttributes
-    product.productAttributes.forEach((productAttr) => {
-      const attrKey = productAttr.attribute.key;
-      const valueMap = new Map<string, { valueId?: string; value: string; label: string; variants: ProductVariant[] }>();
+    if (!product) {
+      console.log('🔄 [ATTRIBUTE GROUPS] No product, returning empty groups');
+      return groups;
+    }
 
-      product.variants?.forEach((variant) => {
-        const option = variant.options?.find((opt) => {
-          if (opt.valueId && opt.attributeId === productAttr.attribute.id) {
-            return true;
-          }
-          return opt.key === attrKey || opt.attribute === attrKey;
-        });
+    console.log('🔄 [ATTRIBUTE GROUPS] Building attribute groups for product:', product.id);
+    console.log('🔄 [ATTRIBUTE GROUPS] Selected color:', selectedColor);
+    console.log('🔄 [ATTRIBUTE GROUPS] Selected size:', selectedSize);
+    console.log('🔄 [ATTRIBUTE GROUPS] Selected attributes:', Array.from(selectedAttributeValues.entries()));
 
-        if (option) {
-          const valueId = option.valueId || '';
-          const value = option.value || '';
-          // Get label from AttributeValue if available, otherwise use value
-          let label = option.value || '';
-          if (valueId && productAttr.attribute.values) {
-            const attrValue = productAttr.attribute.values.find((v: any) => v.id === valueId);
-            if (attrValue) {
-              label = attrValue.label || attrValue.value || value;
-            }
-          }
-
-          const mapKey = valueId || value;
-          if (!valueMap.has(mapKey)) {
-            valueMap.set(mapKey, {
-              valueId: valueId || undefined,
-              value,
-              label,
-              variants: [],
-            });
-          }
-          valueMap.get(mapKey)!.variants.push(variant);
-        }
-      });
-
-      const groups = Array.from(valueMap.values()).map((item) => {
-        // Find the attribute value to get imageUrl and colors
-        // Try multiple matching strategies to ensure we find the correct attribute value
-        let attrValue = null;
-        if (item.valueId && productAttr.attribute.values) {
-          // First try by valueId (most reliable)
-          attrValue = productAttr.attribute.values.find((v: any) => v.id === item.valueId);
-        }
-        if (!attrValue && productAttr.attribute.values) {
-          // Fallback: try by value (case-insensitive)
-          attrValue = productAttr.attribute.values.find((v: any) => 
-            v.value?.toLowerCase() === item.value?.toLowerCase() ||
-            v.value === item.value
-          );
-        }
-        if (!attrValue && productAttr.attribute.values) {
-          // Last resort: try by label (case-insensitive)
-          attrValue = productAttr.attribute.values.find((v: any) => 
-            v.label?.toLowerCase() === item.label?.toLowerCase() ||
-            v.label === item.label
-          );
+    // Helper function to check if a variant is compatible with currently selected attributes
+    // This is used to filter which attribute values to show based on current selections
+    const isVariantCompatible = (variant: ProductVariant, currentSelections: Map<string, string>, excludeAttrKey?: string): boolean => {
+      // If no selections, all variants are compatible
+      if (currentSelections.size === 0) return true;
+      
+      // Check each selected attribute (excluding the one we're building)
+      for (const [attrKey, selectedValue] of currentSelections.entries()) {
+        // Skip the attribute we're currently building
+        if (excludeAttrKey && attrKey === excludeAttrKey) {
+          continue;
         }
         
-        return {
-          valueId: item.valueId,
-          value: item.value,
-          label: item.label,
-          stock: item.variants.reduce((sum, v) => sum + v.stock, 0),
-          variants: item.variants,
-          imageUrl: attrValue?.imageUrl || null,
-          colors: attrValue?.colors || null,
-        };
-      });
+        const variantValue = getOptionValue(variant.options, attrKey);
+        if (variantValue) {
+          // Normalize for comparison
+          const normalizedVariantValue = variantValue.toLowerCase().trim();
+          const normalizedSelectedValue = selectedValue.toLowerCase().trim();
+          
+          // Check if variant has matching value
+          if (normalizedVariantValue !== normalizedSelectedValue) {
+            // Also check by valueId if available
+            const option = variant.options?.find(opt => 
+              opt.key === attrKey || opt.attribute === attrKey
+            );
+            if (option?.valueId && option.valueId === selectedValue) {
+              continue; // Match by valueId
+            }
+            return false; // No match
+          }
+        } else {
+          // Variant doesn't have this attribute, so it's not compatible
+          return false;
+        }
+      }
+      return true; // All selected attributes match
+    };
 
-      attributeGroups.set(attrKey, groups);
-    });
-    
-    // Also extract any additional attributes from variant options that might not be in productAttributes
-    // This handles cases where attributes were added to variants but not yet synced to productAttributes
-    if (product?.variants) {
-      const allAttributeKeys = new Set<string>();
-      
-      // Collect all attribute keys from variant options
-      product.variants.forEach((variant) => {
-        variant.options?.forEach((opt) => {
-          const attrKey = opt.key || opt.attribute || '';
-          if (attrKey && attrKey !== 'color' && attrKey !== 'size') {
-            allAttributeKeys.add(attrKey);
+    // Get currently selected attributes (excluding the attribute we're building)
+    const getCurrentSelections = (excludeAttrKey: string): Map<string, string> => {
+      const selections = new Map<string, string>();
+      if (selectedColor && excludeAttrKey !== 'color') {
+        selections.set('color', selectedColor);
+      }
+      if (selectedSize && excludeAttrKey !== 'size') {
+        selections.set('size', selectedSize);
+      }
+      selectedAttributeValues.forEach((value, key) => {
+        if (key !== excludeAttrKey) {
+          selections.set(key, value);
+        }
+      });
+      return selections;
+    };
+
+    if (product.productAttributes && product.productAttributes.length > 0) {
+      // New format: Use productAttributes
+      product.productAttributes.forEach((productAttr) => {
+        const attrKey = productAttr.attribute.key;
+        const valueMap = new Map<string, { valueId?: string; value: string; label: string; variants: ProductVariant[] }>();
+        
+        // IMPORTANT: Show ALL attribute values, regardless of other selections
+        // We don't filter variants here - we show all values that exist in any variant
+        // Stock will be calculated separately based on current selections
+
+        product.variants?.forEach((variant) => {
+          // Include ALL variants - don't filter by compatibility
+          // This ensures all attribute values are shown
+
+          const option = variant.options?.find((opt) => {
+            if (opt.valueId && opt.attributeId === productAttr.attribute.id) {
+              return true;
+            }
+            return opt.key === attrKey || opt.attribute === attrKey;
+          });
+
+          if (option) {
+            const valueId = option.valueId || '';
+            const value = option.value || '';
+            // Get label from AttributeValue if available, otherwise use value
+            let label = option.value || '';
+            if (valueId && productAttr.attribute.values) {
+              const attrValue = productAttr.attribute.values.find((v: any) => v.id === valueId);
+              if (attrValue) {
+                label = attrValue.label || attrValue.value || value;
+              }
+            }
+
+            const mapKey = valueId || value;
+            if (!valueMap.has(mapKey)) {
+              valueMap.set(mapKey, {
+                valueId: valueId || undefined,
+                value,
+                label,
+                variants: [],
+              });
+            }
+            valueMap.get(mapKey)!.variants.push(variant);
           }
         });
+
+        // Get current selections for stock calculation (excluding this attribute)
+        const currentSelections = getCurrentSelections(attrKey);
+        
+        const groupsArray = Array.from(valueMap.values()).map((item) => {
+          // Find the attribute value to get imageUrl and colors
+          // Try multiple matching strategies to ensure we find the correct attribute value
+          let attrValue = null;
+          if (item.valueId && productAttr.attribute.values) {
+            // First try by valueId (most reliable)
+            attrValue = productAttr.attribute.values.find((v: any) => v.id === item.valueId);
+          }
+          if (!attrValue && productAttr.attribute.values) {
+            // Fallback: try by value (case-insensitive)
+            attrValue = productAttr.attribute.values.find((v: any) => 
+              v.value?.toLowerCase() === item.value?.toLowerCase() ||
+              v.value === item.value
+            );
+          }
+          if (!attrValue && productAttr.attribute.values) {
+            // Last resort: try by label (case-insensitive)
+            attrValue = productAttr.attribute.values.find((v: any) => 
+              v.label?.toLowerCase() === item.label?.toLowerCase() ||
+              v.label === item.label
+            );
+          }
+          
+          // Calculate stock: if other attributes are selected, show stock only for compatible variants
+          // Otherwise, show total stock for all variants with this value
+          let stock = 0;
+          if (currentSelections.size > 0) {
+            // Filter variants by compatibility and sum their stock
+            const compatibleVariants = item.variants.filter(v => {
+              const compatible = isVariantCompatible(v, currentSelections, attrKey);
+              console.log(`🔄 [STOCK] Checking variant ${v.id} for attribute "${attrKey}" value "${item.value}":`, {
+                compatible,
+                currentSelections: Array.from(currentSelections.entries()),
+                variantOptions: v.options
+              });
+              return compatible;
+            });
+            stock = compatibleVariants.reduce((sum, v) => sum + v.stock, 0);
+            console.log(`🔄 [STOCK] Attribute "${attrKey}" value "${item.value}": ${compatibleVariants.length} compatible variants, stock: ${stock}`);
+          } else {
+            // No selections, show total stock
+            stock = item.variants.reduce((sum, v) => sum + v.stock, 0);
+          }
+          
+          return {
+            valueId: item.valueId,
+            value: item.value,
+            label: item.label,
+            stock: stock,
+            variants: item.variants,
+            imageUrl: attrValue?.imageUrl || null,
+            colors: attrValue?.colors || null,
+          };
+        });
+
+        console.log(`🔄 [ATTRIBUTE GROUPS] Built ${groupsArray.length} values for attribute "${attrKey}" from productAttributes`);
+        groups.set(attrKey, groupsArray);
       });
       
-      // For each attribute key not already in attributeGroups, create attribute group from variants
-      allAttributeKeys.forEach((attrKey) => {
-        if (!attributeGroups.has(attrKey)) {
-          const valueMap = new Map<string, { valueId?: string; value: string; label: string; variants: ProductVariant[] }>();
-          
-          product.variants?.forEach((variant) => {
-            const option = variant.options?.find((opt) => 
-              (opt.key === attrKey || opt.attribute === attrKey)
-            );
-            
-            if (option) {
-              const valueId = option.valueId || '';
-              const value = option.value || '';
-              const label = option.value || '';
-              
-              const mapKey = valueId || value;
-              if (!valueMap.has(mapKey)) {
-                valueMap.set(mapKey, {
-                  valueId: valueId || undefined,
-                  value,
-                  label,
-                  variants: [],
-                });
-              }
-              valueMap.get(mapKey)!.variants.push(variant);
+      // Also extract any additional attributes from variant options that might not be in productAttributes
+      // This handles cases where attributes were added to variants but not yet synced to productAttributes
+      if (product?.variants) {
+        const allAttributeKeys = new Set<string>();
+        
+        // Collect all attribute keys from variant options
+        product.variants.forEach((variant) => {
+          variant.options?.forEach((opt) => {
+            const attrKey = opt.key || opt.attribute || '';
+            if (attrKey && attrKey !== 'color' && attrKey !== 'size') {
+              allAttributeKeys.add(attrKey);
             }
           });
-          
-          if (valueMap.size > 0) {
-            // Try to find attribute values from productAttributes to get imageUrl
-            const productAttr = product.productAttributes?.find((pa: any) => 
-              pa.attribute?.key === attrKey
-            );
+        });
+        
+        // For each attribute key not already in groups, create attribute group from variants
+        allAttributeKeys.forEach((attrKey) => {
+          if (!groups.has(attrKey)) {
+            const valueMap = new Map<string, { valueId?: string; value: string; label: string; variants: ProductVariant[] }>();
             
-            const groups = Array.from(valueMap.values()).map((item) => {
+            // IMPORTANT: Show ALL attribute values, regardless of other selections
+            // We don't filter variants here - we show all values that exist in any variant
+            // Stock will be calculated separately based on current selections
+            
+            product.variants?.forEach((variant) => {
+              // Include ALL variants - don't filter by compatibility
+              // This ensures all attribute values are shown
+
+              const option = variant.options?.find((opt) => 
+                (opt.key === attrKey || opt.attribute === attrKey)
+              );
+              
+              if (option) {
+                const valueId = option.valueId || '';
+                const value = option.value || '';
+                const label = option.value || '';
+                
+                const mapKey = valueId || value;
+                if (!valueMap.has(mapKey)) {
+                  valueMap.set(mapKey, {
+                    valueId: valueId || undefined,
+                    value,
+                    label,
+                    variants: [],
+                  });
+                }
+                valueMap.get(mapKey)!.variants.push(variant);
+              }
+            });
+            
+            if (valueMap.size > 0) {
+              // Try to find attribute values from productAttributes to get imageUrl
+              const productAttr = product.productAttributes?.find((pa: any) => 
+                pa.attribute?.key === attrKey
+              );
+              
+            // Get current selections for stock calculation (excluding this attribute)
+            const currentSelections = getCurrentSelections(attrKey);
+            
+            const groupsArray = Array.from(valueMap.values()).map((item) => {
               // Try to find attribute value to get imageUrl and colors
               let attrValue = null;
               if (productAttr?.attribute?.values) {
@@ -879,93 +1075,168 @@ export default function ProductPage({ params }: ProductPageProps) {
                 }
               }
               
+              // Calculate stock: if other attributes are selected, show stock only for compatible variants
+              // Otherwise, show total stock for all variants with this value
+              let stock = 0;
+              if (currentSelections.size > 0) {
+                // Filter variants by compatibility and sum their stock
+                const compatibleVariants = item.variants.filter(v => 
+                  isVariantCompatible(v, currentSelections, attrKey)
+                );
+                stock = compatibleVariants.reduce((sum, v) => sum + v.stock, 0);
+              } else {
+                // No selections, show total stock
+                stock = item.variants.reduce((sum, v) => sum + v.stock, 0);
+              }
+              
               return {
                 valueId: item.valueId,
                 value: item.value,
                 label: item.label,
-                stock: item.variants.reduce((sum, v) => sum + v.stock, 0),
+                stock: stock,
                 variants: item.variants,
                 imageUrl: attrValue?.imageUrl || null,
                 colors: attrValue?.colors || null,
               };
             });
-            
-            attributeGroups.set(attrKey, groups);
-          }
-        }
-      });
-    }
-    } else {
-    // Old format: Extract from variants
-    if (product?.variants) {
-      const colorMap = new Map<string, ProductVariant[]>();
-      const sizeMap = new Map<string, ProductVariant[]>();
-      const otherAttributesMap = new Map<string, Map<string, ProductVariant[]>>();
-
-      product.variants.forEach((variant) => {
-        const color = getOptionValue(variant.options, 'color');
-        const size = getOptionValue(variant.options, 'size');
-
-        if (color) {
-          if (!colorMap.has(color)) colorMap.set(color, []);
-          colorMap.get(color)!.push(variant);
-        }
-
-        if (size) {
-          if (!sizeMap.has(size)) sizeMap.set(size, []);
-          sizeMap.get(size)!.push(variant);
-        }
-        
-        // Extract other attributes
-        variant.options?.forEach((opt) => {
-          const attrKey = opt.key || opt.attribute || '';
-          if (attrKey && attrKey !== 'color' && attrKey !== 'size') {
-            if (!otherAttributesMap.has(attrKey)) {
-              otherAttributesMap.set(attrKey, new Map());
-            }
-            const value = opt.value || '';
-            if (value) {
-              const valueMap = otherAttributesMap.get(attrKey)!;
-              if (!valueMap.has(value)) {
-                valueMap.set(value, []);
-              }
-              valueMap.get(value)!.push(variant);
+              
+              console.log(`🔄 [ATTRIBUTE GROUPS] Built ${groupsArray.length} values for additional attribute "${attrKey}" from variants`);
+              groups.set(attrKey, groupsArray);
             }
           }
         });
-      });
-
-      if (colorMap.size > 0) {
-        attributeGroups.set('color', Array.from(colorMap.entries()).map(([value, variants]) => ({
-          value,
-          label: value,
-          stock: variants.reduce((sum, v) => sum + v.stock, 0),
-          variants,
-        })));
       }
+    } else {
+      // Old format: Extract from variants
+      if (product?.variants) {
+        const colorMap = new Map<string, ProductVariant[]>();
+        const sizeMap = new Map<string, ProductVariant[]>();
+        const otherAttributesMap = new Map<string, Map<string, ProductVariant[]>>();
 
-      if (sizeMap.size > 0) {
-        attributeGroups.set('size', Array.from(sizeMap.entries()).map(([value, variants]) => ({
-          value,
-          label: value,
-          stock: variants.reduce((sum, v) => sum + v.stock, 0),
-          variants,
-        })));
+        // IMPORTANT: Show ALL attribute values, regardless of other selections
+        // We don't filter variants here - we show all values that exist in any variant
+        // Stock will be calculated separately based on current selections
+
+        product.variants.forEach((variant) => {
+          // For old format, show all variants (no filtering by compatibility)
+          // This ensures all attribute values are shown
+
+          const color = getOptionValue(variant.options, 'color');
+          const size = getOptionValue(variant.options, 'size');
+
+          if (color) {
+            if (!colorMap.has(color)) colorMap.set(color, []);
+            colorMap.get(color)!.push(variant);
+          }
+
+          if (size) {
+            if (!sizeMap.has(size)) sizeMap.set(size, []);
+            sizeMap.get(size)!.push(variant);
+          }
+          
+          // Extract other attributes
+          variant.options?.forEach((opt) => {
+            const attrKey = opt.key || opt.attribute || '';
+            if (attrKey && attrKey !== 'color' && attrKey !== 'size') {
+              if (!otherAttributesMap.has(attrKey)) {
+                otherAttributesMap.set(attrKey, new Map());
+              }
+              const value = opt.value || '';
+              if (value) {
+                const valueMap = otherAttributesMap.get(attrKey)!;
+                if (!valueMap.has(value)) {
+                  valueMap.set(value, []);
+                }
+                valueMap.get(value)!.push(variant);
+              }
+            }
+          });
+        });
+
+        // Get current selections for stock calculation
+        const colorSelections = getCurrentSelections('color');
+        const sizeSelections = getCurrentSelections('size');
+        
+        if (colorMap.size > 0) {
+          groups.set('color', Array.from(colorMap.entries()).map(([value, variants]) => {
+            // Calculate stock: if other attributes are selected, show stock only for compatible variants
+            let stock = 0;
+            if (colorSelections.size > 0) {
+              const compatibleVariants = variants.filter(v => 
+                isVariantCompatible(v, colorSelections, 'color')
+              );
+              stock = compatibleVariants.reduce((sum, v) => sum + v.stock, 0);
+            } else {
+              stock = variants.reduce((sum, v) => sum + v.stock, 0);
+            }
+            
+            return {
+              value,
+              label: value,
+              stock: stock,
+              variants,
+            };
+          }));
+        }
+
+        if (sizeMap.size > 0) {
+          groups.set('size', Array.from(sizeMap.entries()).map(([value, variants]) => {
+            // Calculate stock: if other attributes are selected, show stock only for compatible variants
+            let stock = 0;
+            if (sizeSelections.size > 0) {
+              const compatibleVariants = variants.filter(v => 
+                isVariantCompatible(v, sizeSelections, 'size')
+              );
+              stock = compatibleVariants.reduce((sum, v) => sum + v.stock, 0);
+            } else {
+              stock = variants.reduce((sum, v) => sum + v.stock, 0);
+            }
+            
+            return {
+              value,
+              label: value,
+              stock: stock,
+              variants,
+            };
+          }));
+        }
+        
+        // Add other attributes
+        otherAttributesMap.forEach((valueMap, attrKey) => {
+          const attrSelections = getCurrentSelections(attrKey);
+          
+          groups.set(attrKey, Array.from(valueMap.entries()).map(([value, variants]) => {
+            // Calculate stock: if other attributes are selected, show stock only for compatible variants
+            let stock = 0;
+            if (attrSelections.size > 0) {
+              const compatibleVariants = variants.filter(v => 
+                isVariantCompatible(v, attrSelections, attrKey)
+              );
+              stock = compatibleVariants.reduce((sum, v) => sum + v.stock, 0);
+            } else {
+              stock = variants.reduce((sum, v) => sum + v.stock, 0);
+            }
+            
+            return {
+              value,
+              label: value,
+              stock: stock,
+              variants,
+              imageUrl: null,
+              colors: null,
+            };
+          }));
+        });
       }
-      
-      // Add other attributes
-      otherAttributesMap.forEach((valueMap, attrKey) => {
-        attributeGroups.set(attrKey, Array.from(valueMap.entries()).map(([value, variants]) => ({
-          value,
-          label: value,
-          stock: variants.reduce((sum, v) => sum + v.stock, 0),
-          variants,
-          imageUrl: null,
-          colors: null,
-        })));
-      });
     }
-  }
+
+    console.log('🔄 [ATTRIBUTE GROUPS] Final groups:', Array.from(groups.keys()), 'total attributes:', groups.size);
+    groups.forEach((values, key) => {
+      console.log(`🔄 [ATTRIBUTE GROUPS] "${key}": ${values.length} values`, values.map(v => v.value));
+    });
+    
+    return groups;
+  }, [product, selectedColor, selectedSize, selectedAttributeValues, getOptionValue]);
 
   // Backward compatibility: Keep colorGroups and sizeGroups for existing UI
   const colorGroups: Array<{ color: string; stock: number; variants: ProductVariant[] }> = [];
@@ -1323,7 +1594,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                       <div className="flex flex-wrap gap-1.5 items-center">
                         {attrGroups.map((g) => {
                           const isSelected = selectedColor === g.value.toLowerCase().trim();
-                          const isDisabled = g.stock <= 0;
+                          // IMPORTANT: Don't disable based on stock - show all colors, even if stock is 0
+                          // Stock is just informational, not a reason to hide the option
+                          const isDisabled = false; // Always show all colors
                           const hasImage = g.imageUrl;
                           const colorHex = g.colors && Array.isArray(g.colors) && g.colors.length > 0 
                             ? g.colors[0] 
@@ -1341,17 +1614,16 @@ export default function ProductPage({ params }: ProductPageProps) {
                           return (
                             <div key={g.valueId || g.value} className="flex flex-col items-center gap-0.5">
                               <button 
-                                onClick={() => !isDisabled && handleColorSelect(g.value)}
-                                disabled={isDisabled}
+                                onClick={() => handleColorSelect(g.value)}
                                 className={`${sizeClass} rounded-full border-2 transition-all overflow-hidden ${
                                   isSelected 
                                     ? 'border-gray-900 ring-2 ring-offset-1 ring-gray-900 scale-110' 
-                                    : isDisabled 
-                                      ? 'border-gray-100 opacity-30 grayscale cursor-not-allowed' 
+                                    : g.stock <= 0
+                                      ? 'border-gray-200 opacity-60 hover:opacity-80' 
                                       : 'border-gray-300 hover:scale-105'
                                 }`}
                                 style={hasImage ? {} : { backgroundColor: colorHex }}
-                                title={isDisabled ? `${getAttributeLabel(language, attrKey, g.value)} (${t(language, 'product.outOfStock')})` : `${getAttributeLabel(language, attrKey, g.value)}${g.stock > 0 ? ` (${g.stock} ${t(language, 'product.pcs')})` : ''}`} 
+                                title={`${getAttributeLabel(language, attrKey, g.value)}${g.stock > 0 ? ` (${g.stock} ${t(language, 'product.pcs')})` : ` (${t(language, 'product.outOfStock')})`}`} 
                               >
                                 {hasImage ? (
                                   <img 
@@ -1364,6 +1636,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                               {g.stock > 0 && (
                                 <span className={`${totalValues > 8 ? 'text-[10px]' : 'text-xs'} text-gray-500`}>{g.stock}</span>
                               )}
+                              {g.stock <= 0 && (
+                                <span className={`${totalValues > 8 ? 'text-[10px]' : 'text-xs'} text-gray-400`}>0</span>
+                              )}
                             </div>
                           );
                         })}
@@ -1371,16 +1646,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                     ) : isSize ? (
                       <div className="flex flex-wrap gap-1.5">
                         {attrGroups.map((g) => {
-                          let displayStock = g.stock;
-                          if (selectedColor) {
-                            const v = g.variants.find(v => {
-                              const colorOpt = getOptionValue(v.options, 'color');
-                              return colorOpt === selectedColor.toLowerCase().trim();
-                            });
-                            displayStock = v ? v.stock : 0;
-                          }
+                          // Use stock from groups (already calculated with compatibility)
+                          const displayStock = g.stock;
                           const isSelected = selectedSize === g.value.toLowerCase().trim();
-                          const isDisabled = displayStock <= 0;
+                          // IMPORTANT: Don't disable based on stock - show all sizes, even if stock is 0
+                          // Stock is just informational, not a reason to hide the option
+                          const isDisabled = false; // Always show all sizes
                           const hasImage = g.imageUrl;
                           
                           // Dynamic sizing based on number of values
@@ -1404,13 +1675,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                           return (
                             <button 
                               key={g.valueId || g.value}
-                              onClick={() => !isDisabled && handleSizeSelect(g.value)}
-                              disabled={isDisabled}
+                              onClick={() => handleSizeSelect(g.value)}
                               className={`${minWidthClass} ${paddingClass} rounded-lg border-2 transition-all flex items-center gap-1.5 ${
                                 isSelected 
                                   ? 'border-gray-900 bg-gray-50' 
-                                  : isDisabled 
-                                    ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed' 
+                                  : displayStock <= 0
+                                    ? 'border-gray-200 opacity-60 hover:opacity-80' 
                                     : 'border-gray-200 hover:border-gray-400'
                               }`}
                             >
@@ -1423,9 +1693,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                               )}
                               <div className="flex flex-col text-center">
                                 <span className={`${textSizeClass} font-medium`}>{getAttributeLabel(language, attrKey, g.value)}</span>
-                                {displayStock > 0 && (
-                                  <span className={`${totalValues > 10 ? 'text-[10px]' : 'text-xs'} text-gray-500`}>({displayStock})</span>
-                                )}
+                                <span className={`${totalValues > 10 ? 'text-[10px]' : 'text-xs'} ${displayStock > 0 ? 'text-gray-500' : 'text-gray-400'}`}>({displayStock})</span>
                               </div>
                             </button>
                           );
@@ -1437,7 +1705,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                         {attrGroups.map((g) => {
                           const selectedValueId = selectedAttributeValues.get(attrKey);
                           const isSelected = selectedValueId === g.valueId || (!g.valueId && selectedColor === g.value);
-                          const isDisabled = g.stock <= 0;
+                          // IMPORTANT: Don't disable based on stock - show all attribute values, even if stock is 0
+                          // Stock is just informational, not a reason to hide the option
+                          const isDisabled = false; // Always show all attribute values
                           const hasImage = g.imageUrl && g.imageUrl.trim() !== '';
                           
                           // Dynamic sizing based on number of values
@@ -1474,12 +1744,11 @@ export default function ProductPage({ params }: ProductPageProps) {
                                   setSelectedAttributeValues(newMap);
                                 }
                               }}
-                              disabled={isDisabled}
                               className={`${paddingClass} rounded-lg border-2 transition-all flex items-center ${gapClass} ${
                                 isSelected
                                   ? 'border-gray-900 bg-gray-50'
-                                  : isDisabled
-                                    ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                                  : g.stock <= 0
+                                    ? 'border-gray-200 opacity-60 hover:opacity-80'
                                     : 'border-gray-200 hover:border-gray-400'
                               }`}
                             >
