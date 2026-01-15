@@ -18,6 +18,15 @@ interface Product {
     id: string;
     name: string;
   } | null;
+  colors?: Array<{ value: string; imageUrl?: string | null; colors?: string[] | null }>; // Available colors from variants with imageUrl and colors hex
+  originalPrice?: number | null;
+  discountPercent?: number | null;
+  labels?: Array<{
+    type: string;
+    value: string;
+    position: string;
+    color?: string | null;
+  }>;
 }
 
 interface ProductsResponse {
