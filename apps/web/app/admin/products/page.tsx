@@ -7,6 +7,7 @@ import { useAuth } from '../../../lib/auth/AuthContext';
 import { Card, Button } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
 import { useTranslation } from '../../../lib/i18n-client';
+import { formatPrice, getStoredCurrency, initializeCurrencyRates, type CurrencyCode } from '../../../lib/currency';
 
 interface Product {
   id: string;
@@ -65,6 +66,7 @@ export default function ProductsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [togglingAllFeatured, setTogglingAllFeatured] = useState(false);
+  const [currency, setCurrency] = useState<CurrencyCode>('USD'); // Default для SSR
 
   useEffect(() => {
     if (!isLoading) {
@@ -74,6 +76,37 @@ export default function ProductsPage() {
       }
     }
   }, [isLoggedIn, isAdmin, isLoading, router]);
+
+  // Initialize currency rates and listen for currency changes
+  useEffect(() => {
+    const updateCurrency = () => {
+      const newCurrency = getStoredCurrency();
+      console.log('💱 [ADMIN PRODUCTS] Currency updated to:', newCurrency);
+      setCurrency(newCurrency);
+    };
+    
+    // Initialize currency rates
+    initializeCurrencyRates().catch(console.error);
+    
+    // Load currency on mount
+    updateCurrency();
+    
+    // Listen for currency changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('currency-updated', updateCurrency);
+      // Also listen for currency rates updates
+      const handleCurrencyRatesUpdate = () => {
+        console.log('💱 [ADMIN PRODUCTS] Currency rates updated, refreshing currency...');
+        updateCurrency();
+      };
+      window.addEventListener('currency-rates-updated', handleCurrencyRatesUpdate);
+      
+      return () => {
+        window.removeEventListener('currency-updated', updateCurrency);
+        window.removeEventListener('currency-rates-updated', handleCurrencyRatesUpdate);
+      };
+    }
+  }, []);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -900,23 +933,16 @@ export default function ProductsPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-col">
                             <div className="text-sm font-medium text-gray-900">
-                              {new Intl.NumberFormat('en-US', {
-                                style: 'currency',
-                                currency: 'USD',
-                                minimumFractionDigits: 0,
-                              }).format(product.price)}
+                              {formatPrice(product.price, currency)}
                             </div>
                             {(product.compareAtPrice && product.compareAtPrice > product.price) || 
                              (product.discountPercent && product.discountPercent > 0) ? (
                               <div className="text-xs text-gray-500 line-through mt-0.5">
-                                {new Intl.NumberFormat('en-US', {
-                                  style: 'currency',
-                                  currency: 'USD',
-                                  minimumFractionDigits: 0,
-                                }).format(
+                                {formatPrice(
                                   product.compareAtPrice && product.compareAtPrice > product.price
                                     ? product.compareAtPrice
-                                    : product.price / (1 - (product.discountPercent || 0) / 100)
+                                    : product.price / (1 - (product.discountPercent || 0) / 100),
+                                  currency
                                 )}
                               </div>
                             ) : null}
