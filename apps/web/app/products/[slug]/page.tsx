@@ -835,6 +835,8 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     // Helper function to check if a variant is compatible with currently selected attributes
     // This is used to filter which attribute values to show based on current selections
+    // IMPORTANT: A variant can have multiple values for the same attribute (e.g., color: [red, blue, yellow])
+    // So we need to check ALL options, not just the first one
     const isVariantCompatible = (variant: ProductVariant, currentSelections: Map<string, string>, excludeAttrKey?: string): boolean => {
       // If no selections, all variants are compatible
       if (currentSelections.size === 0) return true;
@@ -846,25 +848,42 @@ export default function ProductPage({ params }: ProductPageProps) {
           continue;
         }
         
-        const variantValue = getOptionValue(variant.options, attrKey);
-        if (variantValue) {
-          // Normalize for comparison
-          const normalizedVariantValue = variantValue.toLowerCase().trim();
-          const normalizedSelectedValue = selectedValue.toLowerCase().trim();
-          
-          // Check if variant has matching value
-          if (normalizedVariantValue !== normalizedSelectedValue) {
-            // Also check by valueId if available
-            const option = variant.options?.find(opt => 
-              opt.key === attrKey || opt.attribute === attrKey
-            );
-            if (option?.valueId && option.valueId === selectedValue) {
-              continue; // Match by valueId
-            }
-            return false; // No match
-          }
-        } else {
+        // IMPORTANT: Check ALL options for this attribute, not just the first one
+        // A variant can have multiple values for the same attribute
+        const normalizedSelectedValue = selectedValue.toLowerCase().trim();
+        let hasMatchingValue = false;
+        
+        // Check all options for this attribute
+        const matchingOptions = variant.options?.filter(opt => {
+          const optKey = opt.key || opt.attribute;
+          return optKey === attrKey;
+        }) || [];
+        
+        if (matchingOptions.length === 0) {
           // Variant doesn't have this attribute, so it's not compatible
+          return false;
+        }
+        
+        // Check if any of the options match the selected value
+        for (const option of matchingOptions) {
+          const optValue = option.value?.toLowerCase().trim();
+          const optValueId = option.valueId;
+          
+          // Match by value (case-insensitive)
+          if (optValue === normalizedSelectedValue) {
+            hasMatchingValue = true;
+            break;
+          }
+          
+          // Match by valueId
+          if (optValueId && optValueId === selectedValue) {
+            hasMatchingValue = true;
+            break;
+          }
+        }
+        
+        // If no matching value found, variant is not compatible
+        if (!hasMatchingValue) {
           return false;
         }
       }
