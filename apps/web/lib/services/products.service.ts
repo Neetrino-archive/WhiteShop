@@ -694,13 +694,18 @@ class ProductsService {
         ? variants.sort((a: { price: number }, b: { price: number }) => a.price - b.price)[0]
         : null;
 
-      // Get all unique colors from variants with imageUrl and colors hex (support both new and old format)
+      // Get all unique colors from ALL variants with imageUrl and colors hex (support both new and old format)
       // IMPORTANT: Only collect colors that actually exist in variants
+      // IMPORTANT: Process ALL variants to get ALL colors, not just the first variant
       const colorMap = new Map<string, { value: string; imageUrl?: string | null; colors?: string[] | null }>();
+      
+      console.log(`🎨 [PRODUCTS SERVICE] Processing ${variants.length} variants for product ${product.id} to collect colors`);
+      
+      // Process all variants to collect all unique colors
       variants.forEach((v: any) => {
-        // First, try to get color from variant.options
+        // First, try to get ALL color options from variant.options (not just the first one)
         const options = Array.isArray(v.options) ? v.options : [];
-        const colorOption = options.find((opt: any) => {
+        const colorOptions = options.filter((opt: any) => {
           // Support both new format (AttributeValue) and old format (attributeKey/value)
           if (opt.attributeValue) {
             return opt.attributeValue.attribute?.key === "color";
@@ -708,7 +713,8 @@ class ProductsService {
           return opt.attributeKey === "color";
         });
         
-        if (colorOption) {
+        // Process all color options from this variant
+        colorOptions.forEach((colorOption: any) => {
           let colorValue = "";
           let imageUrl: string | null | undefined = null;
           let colorsHex: string[] | null | undefined = null;
@@ -736,9 +742,11 @@ class ProductsService {
               });
             }
           }
-        } else if (v.attributes && typeof v.attributes === 'object' && v.attributes.color) {
-          // Fallback: check variant.attributes JSONB column if options don't have color
-          // This handles cases where colors are stored in JSONB but not in options
+        });
+        
+        // Fallback: check variant.attributes JSONB column if options don't have color
+        // This handles cases where colors are stored in JSONB but not in options
+        if (colorOptions.length === 0 && v.attributes && typeof v.attributes === 'object' && v.attributes.color) {
           const colorAttributes = Array.isArray(v.attributes.color) ? v.attributes.color : [v.attributes.color];
           colorAttributes.forEach((colorAttr: any) => {
             const colorValue = colorAttr?.value || colorAttr;
@@ -756,6 +764,8 @@ class ProductsService {
           });
         }
       });
+      
+      console.log(`🎨 [PRODUCTS SERVICE] Collected ${colorMap.size} unique colors from ${variants.length} variants for product ${product.id}`);
       
       // Also check productAttributes for color attribute values with imageUrl and colors
       // IMPORTANT: Only update colors that already exist in variants (already in colorMap)
