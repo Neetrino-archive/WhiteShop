@@ -214,6 +214,15 @@ function AddProductPageContent() {
   // Default currency from settings
   const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>('AMD');
   
+  // Product Type: 'simple' or 'variable' (default: 'variable')
+  const [productType, setProductType] = useState<'simple' | 'variable'>('variable');
+  // Simple product fields (only used when productType === 'simple')
+  const [simpleProductData, setSimpleProductData] = useState({
+    price: '',
+    compareAtPrice: '',
+    sku: '',
+    quantity: '',
+  });
   // New Multi-Attribute Variant Builder state
   const [selectedAttributesForVariants, setSelectedAttributesForVariants] = useState<Set<string>>(new Set()); // Selected attribute IDs
   const [selectedAttributeValueIds, setSelectedAttributeValueIds] = useState<Record<string, string[]>>({}); // Key: attributeId, Value: array of selected value IDs
@@ -2112,7 +2121,8 @@ function AddProductPageContent() {
 
       // Convert new variant builder variants to formData.variants if attributes are selected
       // NEW LOGIC: Process all variants (both auto-generated and manually added)
-      if (selectedAttributesForVariants.size > 0 && generatedVariants.length > 0) {
+      // Skip this for simple products
+      if (productType === 'variable' && selectedAttributesForVariants.size > 0 && generatedVariants.length > 0) {
         console.log('🔄 [ADMIN] Converting new variant builder variants to formData format...');
         console.log('📊 [ADMIN] Total generated variants to convert:', generatedVariants.length);
         
@@ -2301,9 +2311,11 @@ function AddProductPageContent() {
         variantsCount: formData.variants.length,
         variants: formData.variants,
         selectedAttributesCount: selectedAttributesForVariants.size,
+        productType: productType,
       });
       
-      if (formData.variants.length === 0) {
+      // Skip variant validation for Simple products - they create variants later in the process
+      if (productType === 'variable' && formData.variants.length === 0) {
         if (selectedAttributesForVariants.size > 0) {
           alert(t('admin.products.add.pleaseGenerateVariants') || 'Please generate variants using the variant builder');
         } else {
@@ -2313,7 +2325,8 @@ function AddProductPageContent() {
         return;
       }
 
-      // Validate all variants
+      // Validate all variants (skip for simple products - validation is done in variant creation)
+      if (productType === 'variable') {
       const skuSet = new Set<string>();
       for (const variant of formData.variants) {
         const variantIndex = formData.variants.indexOf(variant) + 1;
@@ -2397,6 +2410,7 @@ function AddProductPageContent() {
         }
         // No validation for variants without colors - attributes can work independently
       }
+      } // End of variable products validation
 
       // Prepare media array
       // STRICT: Main media should ONLY contain formData.imageUrls (main product images)
@@ -2420,8 +2434,54 @@ function AddProductPageContent() {
       const variants: any[] = [];
       const variantSkuSet = new Set<string>(); // Track SKUs during variant creation
       
-      // Check if we should use generatedVariants (new format)
-      const useGeneratedVariants = generatedVariants.length > 0 && selectedAttributesForVariants.size > 0;
+      // Handle Simple Products - create a single variant without attributes
+      if (productType === 'simple') {
+        console.log('📦 [ADMIN] Processing Simple Product');
+        
+        // Validate simple product fields
+        if (!simpleProductData.price || simpleProductData.price.trim() === '') {
+          alert('Please enter price for the product');
+          setLoading(false);
+          return;
+        }
+        if (!simpleProductData.sku || simpleProductData.sku.trim() === '') {
+          alert('Please enter SKU for the product');
+          setLoading(false);
+          return;
+        }
+        if (!simpleProductData.quantity || simpleProductData.quantity.trim() === '') {
+          alert('Please enter quantity for the product');
+          setLoading(false);
+          return;
+        }
+        
+        // Convert prices from defaultCurrency to USD
+        const priceUSD = convertPrice(parseFloat(simpleProductData.price), defaultCurrency, 'USD');
+        const compareAtPriceUSD = simpleProductData.compareAtPrice && simpleProductData.compareAtPrice.trim() !== ''
+          ? convertPrice(parseFloat(simpleProductData.compareAtPrice), defaultCurrency, 'USD')
+          : undefined;
+        
+        // Create a single variant without attributes
+        const simpleVariant: any = {
+          price: priceUSD,
+          stock: parseInt(simpleProductData.quantity) || 0,
+          sku: simpleProductData.sku.trim(),
+          published: true,
+        };
+        
+        if (compareAtPriceUSD) {
+          simpleVariant.compareAtPrice = compareAtPriceUSD;
+        }
+        
+        // No attributes for simple products - options array is empty/undefined
+        variants.push(simpleVariant);
+        variantSkuSet.add(simpleProductData.sku.trim());
+        
+        console.log('✅ [ADMIN] Simple product variant created:', simpleVariant);
+      } else {
+        // Variable products - process variants normally
+        // Check if we should use generatedVariants (new format)
+        const useGeneratedVariants = generatedVariants.length > 0 && selectedAttributesForVariants.size > 0;
       
       if (useGeneratedVariants) {
         // NEW FORMAT: Create variants from generatedVariants (each variant has all attribute values)
@@ -2903,6 +2963,7 @@ function AddProductPageContent() {
         }
       });
       }
+      } // End of variable products variant processing
 
       // Final validation - ensure all SKUs are unique
       const finalSkuSet = new Set<string>();
@@ -2933,8 +2994,9 @@ function AddProductPageContent() {
       console.log('✅ [ADMIN] Final SKU validation complete. All SKUs are unique:', Array.from(finalSkuSet));
 
       // Final validation - check size requirement for categories that require sizes
+      // Skip this validation for Simple products - they don't have size attributes
       const categoryRequiresSizesFinal = isClothingCategory();
-      if (categoryRequiresSizesFinal && finalPrimaryCategoryId) {
+      if (productType === 'variable' && categoryRequiresSizesFinal && finalPrimaryCategoryId) {
         console.log('🔍 [VALIDATION] Checking size requirement for category:', finalPrimaryCategoryId);
         console.log('📦 [VALIDATION] Total variants to check:', variants.length);
         
@@ -2989,7 +3051,7 @@ function AddProductPageContent() {
           console.error('📋 [VALIDATION] All variants:', JSON.stringify(variants, null, 2));
           console.error('🔍 [VALIDATION] Debug info:', {
             totalVariants: variants.length,
-            useGeneratedVariants,
+            useGeneratedVariants: productType === 'variable' && generatedVariants.length > 0 && selectedAttributesForVariants.size > 0,
             selectedAttributesForVariants: Array.from(selectedAttributesForVariants),
             sizeAttribute: getSizeAttribute()?.id,
             generatedVariantsCount: generatedVariants.length,
@@ -3085,20 +3147,51 @@ function AddProductPageContent() {
         return { processed, skipped: skippedCount };
       };
 
-      // Collect all images that need to be uploaded (product images + variant images)
-      const allImages: string[] = [];
-      
-      // Use imageUrls array if available, otherwise fall back to mainProductImage
+      // Process main product images separately to maintain exact mapping
+      const mainImages: string[] = [];
       if (formData.imageUrls.length > 0) {
-        allImages.push(...formData.imageUrls.filter(Boolean));
+        mainImages.push(...formData.imageUrls.filter(Boolean));
       } else if (formData.mainProductImage) {
-        allImages.push(formData.mainProductImage);
+        mainImages.push(formData.mainProductImage);
       }
+
+      // Process main images with position preservation
+      // This function processes each image individually and preserves original positions
+      const processMainImagesWithPositions = (images: string[]): { mapping: (string | null)[]; skipped: number } => {
+        const MAX_BASE64_SIZE = 500 * 1024; // 500KB per image max
+        const mapping: (string | null)[] = [];
+        let skippedCount = 0;
+        
+        images.forEach((img) => {
+          // If already a URL, keep as is
+          if (isUrl(img)) {
+            mapping.push(img);
+            return;
+          }
+          
+          // If base64, check size
+          if (isBase64Image(img)) {
+            const size = getBase64Size(img);
+            if (size > MAX_BASE64_SIZE) {
+              console.warn(`⚠️ [ADMIN] Main image too large (${Math.round(size / 1024)}KB), skipping to avoid 413 error.`);
+              skippedCount++;
+              mapping.push(null); // Mark as skipped
+              return;
+            }
+            // Small base64, keep as is
+            mapping.push(img);
+            return;
+          }
+          
+          // Unknown format, keep as is
+          mapping.push(img);
+        });
+        
+        return { mapping, skipped: skippedCount };
+      };
       
-      // Add other media (extract URLs from media objects)
-      if (media.length > 0) {
-        allImages.push(...media.map(m => m.url).filter(Boolean));
-      }
+      const mainImagesProcessed = mainImages.length > 0 ? processMainImagesWithPositions(mainImages) : { mapping: [], skipped: 0 };
+      const mainImageMapping = mainImagesProcessed.mapping; // Keep nulls to preserve positions
 
       // Collect variant images
       const variantImages: string[] = [];
@@ -3110,19 +3203,10 @@ function AddProductPageContent() {
         }
       });
 
-      // Combine all images
-      const allImagesToUpload = [...allImages, ...variantImages];
-
-      // Process images - keep URLs, keep small base64, skip large base64
-      let processedImages: string[] = [];
-      let processedVariantImages: string[] = [];
-      let skippedImagesCount = 0;
-      if (allImagesToUpload.length > 0) {
-        const allProcessed = processImages(allImagesToUpload);
-        processedImages = allProcessed.processed.slice(0, allImages.length);
-        processedVariantImages = allProcessed.processed.slice(allImages.length);
-        skippedImagesCount = allProcessed.skipped;
-      }
+      // Process variant images
+      const variantImagesProcessed = variantImages.length > 0 ? processImages(variantImages) : { processed: [], skipped: 0 };
+      const processedVariantImages = variantImagesProcessed.processed;
+      const skippedImagesCount = mainImagesProcessed.skipped + variantImagesProcessed.skipped;
       
       // Warn user if images were skipped
       if (skippedImagesCount > 0) {
@@ -3145,29 +3229,43 @@ function AddProductPageContent() {
       const finalMedia: string[] = [];
       
       if (formData.imageUrls.length > 0) {
-        // Map processed images back to imageUrls
-        const processedImageUrls = processedImages.slice(0, formData.imageUrls.length);
+        // Use mainImageMapping which preserves positions
+        // Map it back to formData.imageUrls indices
+        const processedImageUrls: string[] = [];
+        
+        formData.imageUrls.forEach((originalUrl, index) => {
+          if (!originalUrl || !originalUrl.trim()) {
+            return; // Skip empty URLs
+          }
+          
+          // Find corresponding processed image in mainImageMapping
+          // mainImageMapping is in the same order as mainImages (which is formData.imageUrls)
+          const mainImagesIndex = mainImages.indexOf(originalUrl);
+          if (mainImagesIndex >= 0 && mainImagesIndex < mainImageMapping.length) {
+            const processedImg = mainImageMapping[mainImagesIndex];
+            if (processedImg) {
+              processedImageUrls[index] = processedImg;
+            }
+            // If null, image was skipped - don't add it to finalMedia
+          }
+        });
         
         // Add featured image first (main image)
         if (processedImageUrls[formData.featuredImageIndex]) {
           finalMedia.push(processedImageUrls[formData.featuredImageIndex]);
         }
-        // Add other images
+        // Add other images in order (skip null/undefined)
         processedImageUrls.forEach((url, index) => {
           if (index !== formData.featuredImageIndex && url) {
             finalMedia.push(url);
           }
         });
-      } else if (formData.mainProductImage && processedImages.length > 0) {
+      } else if (formData.mainProductImage) {
         // Fallback to legacy mainProductImage
-        finalMedia.push(processedImages[0]);
-      }
-      
-      // Add other media (from media array)
-      if (media.length > 0) {
-        const mediaStartIndex = formData.imageUrls.length || (formData.mainProductImage ? 1 : 0);
-        const mediaImages = processedImages.slice(mediaStartIndex);
-        finalMedia.push(...mediaImages.filter(Boolean));
+        const mainImgProcessed = mainImageMapping[0];
+        if (mainImgProcessed) {
+          finalMedia.push(mainImgProcessed);
+        }
       }
       
       if (finalMedia.length > 0) {
@@ -3176,9 +3274,9 @@ function AddProductPageContent() {
       
       // Also add mainProductImage as separate field for easier access
       // Use featured image from imageUrls if available
-      const mainImage = formData.imageUrls.length > 0 && processedImages[formData.featuredImageIndex]
-        ? processedImages[formData.featuredImageIndex]
-        : (processedImages.length > 0 ? processedImages[0] : formData.mainProductImage);
+      const mainImage = formData.imageUrls.length > 0 && mainImageMapping.length > formData.featuredImageIndex
+        ? mainImageMapping[formData.featuredImageIndex]
+        : (mainImageMapping.length > 0 ? mainImageMapping[0] : formData.mainProductImage);
       if (mainImage) {
         payload.mainProductImage = mainImage;
       }
@@ -3287,6 +3385,40 @@ function AddProductPageContent() {
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('admin.products.add.basicInformation')}</h2>
               <div className="space-y-4">
+                {/* Product Type Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('admin.products.add.productType')} *
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    {t('admin.products.add.productTypeDescription')}
+                  </p>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="productType"
+                        value="simple"
+                        checked={productType === 'simple'}
+                        onChange={(e) => setProductType(e.target.value as 'simple' | 'variable')}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{t('admin.products.add.productTypeSimple')}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="productType"
+                        value="variable"
+                        checked={productType === 'variable'}
+                        onChange={(e) => setProductType(e.target.value as 'simple' | 'variable')}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{t('admin.products.add.productTypeVariable')}</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('admin.products.add.title')} *
@@ -3424,6 +3556,86 @@ function AddProductPageContent() {
                 </div>
               </div>
             </div>
+
+            {/* Simple Product Fields - Only shown when productType === 'simple' */}
+            {productType === 'simple' && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('admin.products.add.productVariants')}</h2>
+                <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Price */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('admin.products.add.price')} *
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={simpleProductData.price}
+                          onChange={(e) => setSimpleProductData((prev) => ({ ...prev, price: e.target.value }))}
+                          placeholder={t('admin.products.add.pricePlaceholder')}
+                          className="flex-1"
+                          min="0"
+                          step="0.01"
+                          required
+                        />
+                        <span className="text-sm text-gray-500 whitespace-nowrap">{CURRENCIES[defaultCurrency].symbol}</span>
+                      </div>
+                    </div>
+
+                    {/* Compare At Price */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('admin.products.add.compareAtPrice')}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={simpleProductData.compareAtPrice}
+                          onChange={(e) => setSimpleProductData((prev) => ({ ...prev, compareAtPrice: e.target.value }))}
+                          placeholder={t('admin.products.add.pricePlaceholder')}
+                          className="flex-1"
+                          min="0"
+                          step="0.01"
+                        />
+                        <span className="text-sm text-gray-500 whitespace-nowrap">{CURRENCIES[defaultCurrency].symbol}</span>
+                      </div>
+                    </div>
+
+                    {/* SKU */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('admin.products.add.sku')} *
+                      </label>
+                      <Input
+                        type="text"
+                        value={simpleProductData.sku}
+                        onChange={(e) => setSimpleProductData((prev) => ({ ...prev, sku: e.target.value }))}
+                        placeholder={t('admin.products.add.autoGenerated')}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('admin.products.add.quantity')} *
+                      </label>
+                      <Input
+                        type="number"
+                        value={simpleProductData.quantity}
+                        onChange={(e) => setSimpleProductData((prev) => ({ ...prev, quantity: e.target.value }))}
+                        placeholder={t('admin.products.add.quantityPlaceholder')}
+                        className="w-full"
+                        min="0"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Categories & Brands */}
             <div>
@@ -3841,7 +4053,8 @@ function AddProductPageContent() {
               )}
             </div>
 
-            {/* Select Attributes for Variants */}
+            {/* Select Attributes for Variants - Only shown when productType === 'variable' */}
+            {productType === 'variable' && (
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('admin.products.add.selectAttributesForVariants')}</h2>
               <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -3992,10 +4205,11 @@ function AddProductPageContent() {
                 )}
               </div>
             </div>
+            )}
 
-            {/* New Multi-Attribute Variant Builder */}
+            {/* New Multi-Attribute Variant Builder - Only shown when productType === 'variable' */}
             {/* Show in edit mode if variants are loaded, or if attributes are selected */}
-            {((isEditMode && generatedVariants.length > 0) || selectedAttributesForVariants.size > 0) && (
+            {productType === 'variable' && ((isEditMode && generatedVariants.length > 0) || selectedAttributesForVariants.size > 0) && (
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('admin.products.add.variantBuilder') || 'Տարբերակների կառուցիչ'}</h2>
                 <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
