@@ -1024,17 +1024,23 @@ function AddProductPageContent() {
       }
       
       // Convert each variant to generatedVariants format
-      // NEW: Each variant becomes a separate row (no grouping)
+      // NEW LOGIC: Group variants by their attribute values, price, compareAtPrice, and stock
+      // This matches the Add New Product UI where one variant row shows all values
       // Extract attribute values from JSONB attributes column or from options
-      const convertedVariants: Array<{
+      
+      // First, collect all variant data with their attribute values
+      interface VariantData {
         id: string;
         selectedValueIds: string[];
-        price: string;
-        compareAtPrice: string;
-        stock: string;
+        price: number;
+        compareAtPrice: number | null;
+        stock: number;
         sku: string;
         image: string | null;
-      }> = [];
+        originalVariantIds: string[]; // Keep track of original variant IDs for reference
+      }
+      
+      const variantDataList: VariantData[] = [];
       
       productVariants.forEach((variant: any, variantIndex: number) => {
         const selectedValueIds: string[] = [];
@@ -1078,7 +1084,6 @@ function AddProductPageContent() {
         }
         
         // Fallback: collect valueIds from variant options if JSONB is empty
-        // Group options by variant (all options for this variant should be in one row)
         if (selectedValueIds.length === 0 && variant.options && Array.isArray(variant.options)) {
           console.log(`🔍 [ADMIN] Variant ${variantIndex} using options fallback:`, variant.options);
           
@@ -1139,7 +1144,6 @@ function AddProductPageContent() {
           });
         }
         
-        // Create a separate row for each variant
         // Extract image URL from variant.imageUrl (can be comma-separated)
         let variantImage: string | null = null;
         if (variant.imageUrl) {
@@ -1161,14 +1165,106 @@ function AddProductPageContent() {
           console.log(`🖼️ [ADMIN] Variant ${variantIndex} has no imageUrl`);
         }
         
-        convertedVariants.push({
+        // Convert prices from USD to defaultCurrency for display
+        const priceInDefaultCurrency = variant.price !== undefined && variant.price !== null 
+          ? convertPrice(variant.price, 'USD', defaultCurrency)
+          : 0;
+        const compareAtPriceInDefaultCurrency = variant.compareAtPrice !== undefined && variant.compareAtPrice !== null 
+          ? convertPrice(variant.compareAtPrice, 'USD', defaultCurrency)
+          : null;
+        
+        variantDataList.push({
           id: variant.id || `variant-${Date.now()}-${variantIndex}-${Math.random()}`,
-          selectedValueIds, // This variant's specific attribute values
-          price: variant.price !== undefined && variant.price !== null ? String(variant.price) : '0.00',
-          compareAtPrice: variant.compareAtPrice !== undefined && variant.compareAtPrice !== null ? String(variant.compareAtPrice) : '0.00',
-          stock: variant.stock !== undefined && variant.stock !== null ? String(variant.stock) : '0',
+          selectedValueIds: selectedValueIds.sort(), // Sort for consistent grouping
+          price: priceInDefaultCurrency,
+          compareAtPrice: compareAtPriceInDefaultCurrency,
+          stock: variant.stock !== undefined && variant.stock !== null ? variant.stock : 0,
           sku: variant.sku || '',
-          image: variantImage, // Use extracted image URL
+          image: variantImage,
+          originalVariantIds: [variant.id || `variant-${variantIndex}`],
+        });
+      });
+      
+      // Group variants by their attribute values, price, compareAtPrice, and stock
+      // Variants with the same combination of these should be grouped together
+      const variantGroups = new Map<string, VariantData[]>();
+      
+      variantDataList.forEach((variantData) => {
+        // Create a unique key for grouping based on:
+        // 1. Sorted attribute value IDs (same values = same group)
+        // 2. Price
+        // 3. CompareAtPrice
+        // 4. Stock (if all variants have the same stock, they can be grouped)
+        const valueIdsKey = variantData.selectedValueIds.join(',');
+        const priceKey = variantData.price.toString();
+        const compareAtPriceKey = variantData.compareAtPrice !== null ? variantData.compareAtPrice.toString() : 'null';
+        const stockKey = variantData.stock.toString();
+        
+        // Group key: combine all factors
+        // Note: We group by valueIds, price, and compareAtPrice
+        // Stock can vary per combination, so we don't include it in the group key
+        // Instead, we'll use the first variant's stock as the default
+        const groupKey = `${valueIdsKey}|${priceKey}|${compareAtPriceKey}`;
+        
+        if (!variantGroups.has(groupKey)) {
+          variantGroups.set(groupKey, []);
+        }
+        variantGroups.get(groupKey)!.push(variantData);
+      });
+      
+      // Convert grouped variants to generatedVariants format
+      // Each group becomes one variant row with all value IDs combined
+      const convertedVariants: Array<{
+        id: string;
+        selectedValueIds: string[];
+        price: string;
+        compareAtPrice: string;
+        stock: string;
+        sku: string;
+        image: string | null;
+      }> = [];
+      
+      variantGroups.forEach((group, groupKey) => {
+        // Combine all value IDs from all variants in this group
+        const allValueIds = new Set<string>();
+        group.forEach(variantData => {
+          variantData.selectedValueIds.forEach(valueId => {
+            allValueIds.add(valueId);
+          });
+        });
+        
+        // Use the first variant's data as the base (price, compareAtPrice, stock, sku, image)
+        const firstVariant = group[0];
+        
+        // For stock, if all variants in the group have the same stock, use that
+        // Otherwise, use the first variant's stock (or sum if needed)
+        const allStocksSame = group.every(v => v.stock === firstVariant.stock);
+        const stockValue = allStocksSame ? firstVariant.stock : firstVariant.stock;
+        
+        // Combine SKUs if multiple variants (for reference)
+        const combinedSku = group.length === 1 
+          ? firstVariant.sku 
+          : group.map(v => v.sku).filter(Boolean).join(', ');
+        
+        // Use first variant's image, or combine if multiple
+        const combinedImage = firstVariant.image;
+        
+        convertedVariants.push({
+          id: `variant-group-${Date.now()}-${Math.random()}`, // New ID for grouped variant
+          selectedValueIds: Array.from(allValueIds).sort(), // All unique value IDs from the group
+          price: firstVariant.price.toString(),
+          compareAtPrice: firstVariant.compareAtPrice !== null ? firstVariant.compareAtPrice.toString() : '',
+          stock: stockValue.toString(),
+          sku: combinedSku,
+          image: combinedImage,
+        });
+        
+        console.log(`✅ [ADMIN] Grouped ${group.length} variants into 1 row:`, {
+          groupKey,
+          valueIds: Array.from(allValueIds),
+          price: firstVariant.price,
+          stock: stockValue,
+          originalVariantIds: group.flatMap(v => v.originalVariantIds),
         });
       });
       
@@ -2612,26 +2708,6 @@ function AddProductPageContent() {
             ? convertPrice(parseFloat(genVariant.compareAtPrice), defaultCurrency, 'USD')
             : undefined;
           
-          // Generate SKU if not provided
-          let finalSku = genVariant.sku || undefined;
-          if (!finalSku || finalSku.trim() === '') {
-            const baseSlug = formData.slug || 'PROD';
-            finalSku = `${baseSlug.toUpperCase()}-${Date.now()}-${variantIndex + 1}`;
-          }
-          
-          // Ensure SKU is unique during creation
-          let uniqueSku = finalSku;
-          let skuCounter = 1;
-          while (variantSkuSet.has(uniqueSku)) {
-            uniqueSku = `${finalSku}-${skuCounter}`;
-            skuCounter++;
-          }
-          variantSkuSet.add(uniqueSku);
-          finalSku = uniqueSku;
-          
-          // Collect all attribute options for this variant from selectedValueIds
-          const variantOptions: Array<{ attributeKey: string; value: string; valueId?: string }> = [];
-          
           // Group valueIds by attribute
           const attributeValueMap: Record<string, Array<{ valueId: string; value: string }>> = {};
           
@@ -2654,30 +2730,120 @@ function AddProductPageContent() {
                   valueId: value.id,
                   value: value.value,
                 });
-                
-                // Also add to variantOptions for backward compatibility
-                variantOptions.push({
-                  attributeKey: attribute.key,
-                  value: value.value,
-                  valueId: value.id,
-                });
               }
             } else {
               console.warn(`  ⚠️ ValueId ${valueId} not found in any attribute`);
             }
           });
           
-          console.log(`📦 [ADMIN] Variant ${variantIndex + 1} options:`, variantOptions);
-          
-          variants.push({
-            price: variantPriceUSD,
-            compareAtPrice: variantCompareAtPriceUSD,
-            stock: parseInt(genVariant.stock || '0') || 0,
-            sku: finalSku,
-            imageUrl: genVariant.image || undefined,
-            published: true,
-            options: variantOptions.length > 0 ? variantOptions : undefined,
-          });
+          // Generate all combinations of attribute values
+          // Example: If we have color: [Red, Green] and size: [S, M]
+          // We need to create: Red+S, Red+M, Green+S, Green+M
+          const attributeKeys = Object.keys(attributeValueMap);
+          if (attributeKeys.length === 0) {
+            // No attributes, create single variant
+            const finalSku = genVariant.sku || `${formData.slug || 'PROD'}-${Date.now()}-${variantIndex + 1}`;
+            let uniqueSku = finalSku;
+            let skuCounter = 1;
+            while (variantSkuSet.has(uniqueSku)) {
+              uniqueSku = `${finalSku}-${skuCounter}`;
+              skuCounter++;
+            }
+            variantSkuSet.add(uniqueSku);
+            
+            variants.push({
+              price: variantPriceUSD,
+              compareAtPrice: variantCompareAtPriceUSD,
+              stock: parseInt(genVariant.stock || '0') || 0,
+              sku: uniqueSku,
+              imageUrl: genVariant.image || undefined,
+              published: true,
+            });
+          } else {
+            // Generate all combinations
+            const attributeValueGroups = attributeKeys.map(key => 
+              attributeValueMap[key].map(v => v.valueId)
+            );
+            
+            // Generate combinations using the same logic as generateAttributeCombinations
+            const generateCombinations = (groups: string[][]): string[][] => {
+              if (groups.length === 0) return [[]];
+              if (groups.length === 1) return groups[0].map(v => [v]);
+              
+              const [firstGroup, ...restGroups] = groups;
+              const restCombinations = generateCombinations(restGroups);
+              const result: string[][] = [];
+              
+              for (const value of firstGroup) {
+                for (const combination of restCombinations) {
+                  result.push([value, ...combination]);
+                }
+              }
+              
+              return result;
+            };
+            
+            const combinations = generateCombinations(attributeValueGroups);
+            console.log(`📦 [ADMIN] Variant ${variantIndex + 1} will expand to ${combinations.length} combinations:`, combinations);
+            
+            // Create a variant for each combination
+            combinations.forEach((combination, comboIndex) => {
+              // Build options for this combination
+              const variantOptions: Array<{ attributeKey: string; value: string; valueId?: string }> = [];
+              
+              combination.forEach((valueId) => {
+                // Find which attribute this valueId belongs to
+                const attribute = attributes.find(a => 
+                  a.values.some(v => v.id === valueId)
+                );
+                
+                if (attribute) {
+                  const value = attribute.values.find(v => v.id === valueId);
+                  if (value) {
+                    variantOptions.push({
+                      attributeKey: attribute.key,
+                      value: value.value,
+                      valueId: value.id,
+                    });
+                  }
+                }
+              });
+              
+              // Generate SKU for this combination
+              const baseSlug = formData.slug || 'PROD';
+              const valueParts = variantOptions.map(opt => opt.value.toUpperCase().replace(/\s+/g, '-'));
+              const skuSuffix = valueParts.length > 0 ? `-${valueParts.join('-')}` : '';
+              const finalSku = genVariant.sku 
+                ? `${genVariant.sku}${skuSuffix}`
+                : `${baseSlug.toUpperCase()}-${Date.now()}-${variantIndex + 1}-${comboIndex + 1}${skuSuffix}`;
+              
+              // Ensure SKU is unique
+              let uniqueSku = finalSku;
+              let skuCounter = 1;
+              while (variantSkuSet.has(uniqueSku)) {
+                uniqueSku = `${finalSku}-${skuCounter}`;
+                skuCounter++;
+              }
+              variantSkuSet.add(uniqueSku);
+              
+              console.log(`  ✅ Creating variant combination ${comboIndex + 1}/${combinations.length}:`, {
+                options: variantOptions.map(o => `${o.attributeKey}=${o.value}`).join(', '),
+                sku: uniqueSku,
+                price: variantPriceUSD,
+                stock: genVariant.stock,
+              });
+              
+              variants.push({
+                price: variantPriceUSD,
+                compareAtPrice: variantCompareAtPriceUSD,
+                stock: parseInt(genVariant.stock || '0') || 0,
+                sku: uniqueSku,
+                imageUrl: genVariant.image || undefined,
+                published: true,
+                options: variantOptions.length > 0 ? variantOptions : undefined,
+              });
+            });
+          }
         });
       } else {
         // OLD FORMAT: Create variants from formData.variants (legacy support)

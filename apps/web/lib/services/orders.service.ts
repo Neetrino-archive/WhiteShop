@@ -84,6 +84,14 @@ class OrdersService {
         }
 
         // Format cart items
+        console.log('🛒 [ORDERS SERVICE] Processing cart items:', cart.items.map((item: any) => ({
+          itemId: item.id,
+          variantId: item.variantId,
+          productId: item.productId,
+          quantity: item.quantity,
+          hasVariant: !!item.variant,
+        })));
+        
         cartItems = await Promise.all(
           cart.items.map(async (item: {
             productId: string;
@@ -95,6 +103,30 @@ class OrdersService {
           }) => {
             const product = item.product;
             const variant = item.variant;
+            
+            if (!variant) {
+              console.error('❌ [ORDERS SERVICE] Cart item missing variant:', {
+                itemId: item.id,
+                variantId: item.variantId,
+                productId: item.productId,
+              });
+              throw {
+                status: 404,
+                type: "https://api.shop.am/problems/not-found",
+                title: "Variant not found",
+                detail: `Variant ${item.variantId} not found for cart item`,
+              };
+            }
+            
+            console.log('✅ [ORDERS SERVICE] Processing cart item:', {
+              itemId: item.id,
+              variantId: variant.id,
+              productId: product.id,
+              quantity: item.quantity,
+              variantStock: variant.stock,
+              variantSku: variant.sku,
+            });
+            
             const translation = product.translations?.[0] || product.translations?.[0];
 
             // Get variant title from options
@@ -125,7 +157,7 @@ class OrdersService {
               };
             }
 
-            return {
+            const cartItem = {
               variantId: variant.id,
               productId: product.id,
               quantity: item.quantity,
@@ -135,8 +167,19 @@ class OrdersService {
               sku: variant.sku || '',
               imageUrl,
             };
+            
+            console.log('✅ [ORDERS SERVICE] Cart item formatted:', {
+              variantId: cartItem.variantId,
+              productId: cartItem.productId,
+              quantity: cartItem.quantity,
+              sku: cartItem.sku,
+            });
+            
+            return cartItem;
           })
         );
+        
+        console.log('✅ [ORDERS SERVICE] All cart items processed:', cartItems.length);
       } else if (guestItems && Array.isArray(guestItems) && guestItems.length > 0) {
         // Get items from guest checkout
         cartItems = await Promise.all(
@@ -293,15 +336,84 @@ class OrdersService {
         });
 
         // Update stock for all variants
-        for (const item of cartItems) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: {
-              stock: {
-                decrement: item.quantity,
+        console.log('📦 [ORDERS SERVICE] Updating stock for variants:', cartItems.map(item => ({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          sku: item.sku,
+        })));
+        
+        try {
+          for (const item of cartItems) {
+            if (!item.variantId) {
+              console.error('❌ [ORDERS SERVICE] Missing variantId for item:', item);
+              throw {
+                status: 400,
+                type: "https://api.shop.am/problems/validation-error",
+                title: "Validation Error",
+                detail: `Missing variantId for item with SKU: ${item.sku}`,
+              };
+            }
+
+            // Get current stock before update for logging
+            const variantBefore = await tx.productVariant.findUnique({
+              where: { id: item.variantId },
+              select: { stock: true, sku: true },
+            });
+
+            if (!variantBefore) {
+              console.error('❌ [ORDERS SERVICE] Variant not found:', item.variantId);
+              throw {
+                status: 404,
+                type: "https://api.shop.am/problems/not-found",
+                title: "Variant not found",
+                detail: `Variant with id '${item.variantId}' not found`,
+              };
+            }
+
+            console.log(`📦 [ORDERS SERVICE] Updating stock for variant ${item.variantId} (SKU: ${variantBefore.sku}):`, {
+              currentStock: variantBefore.stock,
+              quantityToDecrement: item.quantity,
+              newStock: variantBefore.stock - item.quantity,
+            });
+
+            // Update stock with decrement
+            const updatedVariant = await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: {
+                stock: {
+                  decrement: item.quantity,
+                },
               },
-            },
+              select: { stock: true, sku: true },
+            });
+
+            console.log(`✅ [ORDERS SERVICE] Stock updated for variant ${item.variantId} (SKU: ${updatedVariant.sku}):`, {
+              newStock: updatedVariant.stock,
+              expectedStock: variantBefore.stock - item.quantity,
+              match: updatedVariant.stock === (variantBefore.stock - item.quantity),
+            });
+
+            // Verify stock was actually decremented
+            if (updatedVariant.stock !== (variantBefore.stock - item.quantity)) {
+              console.error('❌ [ORDERS SERVICE] Stock update mismatch!', {
+                variantId: item.variantId,
+                expectedStock: variantBefore.stock - item.quantity,
+                actualStock: updatedVariant.stock,
+                quantity: item.quantity,
+              });
+              // Don't throw here - transaction will rollback if needed
+            }
+          }
+          
+          console.log('✅ [ORDERS SERVICE] All variant stocks updated successfully');
+        } catch (stockError: any) {
+          console.error('❌ [ORDERS SERVICE] Error updating stock:', {
+            error: stockError,
+            message: stockError?.message,
+            detail: stockError?.detail,
           });
+          // Re-throw to rollback transaction
+          throw stockError;
         }
 
         // Create payment record
