@@ -176,7 +176,7 @@
     "updateCategory": "Թարմացնել կատեգորիա",
     "categoryTitle": "Կատեգորիայի անվանում",
     "categoryTitlePlaceholder": "Մուտքագրել կատեգորիայի անվանում",
-    "parentCategory": "Զավակ կատեգորիա",
+    "parentCategory": "Ենթակատեգորիա",
     "rootCategory": "Ոչինչ (Արմատային կատեգորիա)",
     "requiresSizes": "Այս կատեգորիան պահանջում է չափեր (օր.՝ հագուստ, կոշիկ)",
     "titleRequired": "Խնդրում ենք մուտքագրել կատեգորիայի անվանում",
