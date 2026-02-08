@@ -234,6 +234,18 @@ function ProfilePageContent() {
     }
   }, [ordersPage]);
 
+  // Lock body scroll when order modal is open
+  useEffect(() => {
+    if (selectedOrder) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedOrder]);
+
   // Load orders when orders tab is active
   useEffect(() => {
     if (isLoggedIn && !authLoading && activeTab === 'orders') {
