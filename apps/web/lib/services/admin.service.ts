@@ -354,6 +354,10 @@ class AdminService {
       paymentStatus: string; 
       fulfillmentStatus: string; 
       total: number; 
+      subtotal: number;
+      discountAmount: number;
+      shippingAmount: number;
+      taxAmount: number;
       currency: string | null; 
       customerEmail: string | null; 
       customerPhone: string | null; 
@@ -378,6 +382,10 @@ class AdminService {
         paymentStatus: order.paymentStatus,
         fulfillmentStatus: order.fulfillmentStatus,
         total: order.total,
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount,
+        shippingAmount: order.shippingAmount,
+        taxAmount: order.taxAmount,
         currency: order.currency || 'AMD',
         customerEmail: customer?.email || order.customerEmail || '',
         customerPhone: customer?.phone || order.customerPhone || '',

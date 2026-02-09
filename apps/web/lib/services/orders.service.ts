@@ -517,6 +517,10 @@ class OrdersService {
         paymentStatus: string;
         fulfillmentStatus: string;
         total: number;
+        subtotal: number;
+        discountAmount: number;
+        shippingAmount: number;
+        taxAmount: number;
         currency: string;
         createdAt: Date;
         items: Array<{ id: string }>;
@@ -527,6 +531,10 @@ class OrdersService {
         paymentStatus: order.paymentStatus,
         fulfillmentStatus: order.fulfillmentStatus,
         total: order.total,
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount,
+        shippingAmount: order.shippingAmount,
+        taxAmount: order.taxAmount,
         currency: order.currency,
         createdAt: order.createdAt,
         itemsCount: order.items.length,

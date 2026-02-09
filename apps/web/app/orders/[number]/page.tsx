@@ -354,8 +354,18 @@ export default function OrderPage() {
                       <p className="text-sm text-gray-600 mt-2">
                         {t('orders.itemDetails.quantity')
                           .replace('{qty}', item.quantity.toString())
-                          .replace('{price}', formatPrice(item.price, currency))
-                          .replace('{total}', formatPrice(item.total, currency))}
+                          .replace('{price}', (() => {
+                            // Item price is stored in USD, convert to display currency
+                            const priceAMD = convertPrice(item.price, 'USD', 'AMD');
+                            const priceDisplay = currency === 'AMD' ? priceAMD : convertPrice(priceAMD, 'AMD', currency);
+                            return formatPriceInCurrency(priceDisplay, currency);
+                          })())
+                          .replace('{total}', (() => {
+                            // Item total is stored in USD, convert to display currency
+                            const totalAMD = convertPrice(item.total, 'USD', 'AMD');
+                            const totalDisplay = currency === 'AMD' ? totalAMD : convertPrice(totalAMD, 'AMD', currency);
+                            return formatPriceInCurrency(totalDisplay, currency);
+                          })())}
                       </p>
                     </div>
                   </div>
@@ -396,12 +406,26 @@ export default function OrderPage() {
                 <>
                   <div className="flex justify-between text-gray-600">
                     <span>{t('orders.orderSummary.subtotal')}</span>
-                    <span>{formatPrice(order.totals.subtotal, currency)}</span>
+                    <span>
+                      {(() => {
+                        // Subtotal is stored in USD, convert to display currency
+                        const subtotalAMD = convertPrice(order.totals.subtotal, 'USD', 'AMD');
+                        const subtotalDisplay = currency === 'AMD' ? subtotalAMD : convertPrice(subtotalAMD, 'AMD', currency);
+                        return formatPriceInCurrency(subtotalDisplay, currency);
+                      })()}
+                    </span>
                   </div>
                   {order.totals.discount > 0 && (
                     <div className="flex justify-between text-gray-600">
                       <span>{t('orders.orderSummary.discount')}</span>
-                      <span>-{formatPrice(order.totals.discount, currency)}</span>
+                      <span>
+                        -{(() => {
+                          // Discount is stored in USD, convert to display currency
+                          const discountAMD = convertPrice(order.totals.discount, 'USD', 'AMD');
+                          const discountDisplay = currency === 'AMD' ? discountAMD : convertPrice(discountAMD, 'AMD', currency);
+                          return formatPriceInCurrency(discountDisplay, currency);
+                        })()}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-gray-600">
@@ -426,12 +450,33 @@ export default function OrderPage() {
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>{t('orders.orderSummary.tax')}</span>
-                    <span>{formatPrice(order.totals.tax, currency)}</span>
+                    <span>
+                      {(() => {
+                        // Tax is stored in USD, convert to display currency
+                        const taxAMD = convertPrice(order.totals.tax, 'USD', 'AMD');
+                        const taxDisplay = currency === 'AMD' ? taxAMD : convertPrice(taxAMD, 'AMD', currency);
+                        return formatPriceInCurrency(taxDisplay, currency);
+                      })()}
+                    </span>
                   </div>
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>{t('orders.orderSummary.total')}</span>
-                      <span>{formatPrice(order.totals.total, currency)}</span>
+                      <span>
+                        {(() => {
+                          // Total is stored as USD + AMD (mixed), so we need to recalculate it properly
+                          // Subtotal and tax are in USD, shipping is in AMD
+                          const subtotalAMD = convertPrice(order.totals.subtotal, 'USD', 'AMD');
+                          const discountAMD = convertPrice(order.totals.discount, 'USD', 'AMD');
+                          const shippingAMD = calculatedShipping !== null ? calculatedShipping : order.totals.shipping; // Already in AMD
+                          const taxAMD = convertPrice(order.totals.tax, 'USD', 'AMD');
+                          const totalAMD = subtotalAMD - discountAMD + shippingAMD + taxAMD;
+                          
+                          // Convert AMD to display currency if needed
+                          const totalDisplay = currency === 'AMD' ? totalAMD : convertPrice(totalAMD, 'AMD', currency);
+                          return formatPriceInCurrency(totalDisplay, currency);
+                        })()}
+                      </span>
                     </div>
                   </div>
                 </>

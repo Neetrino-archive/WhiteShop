@@ -155,6 +155,10 @@ function ProfilePageContent() {
       paymentStatus: string;
       fulfillmentStatus: string;
       total: number;
+      subtotal?: number;
+      discountAmount?: number;
+      shippingAmount?: number;
+      taxAmount?: number;
       currency: string;
       itemsCount: number;
       createdAt: string;
@@ -170,6 +174,10 @@ function ProfilePageContent() {
     paymentStatus: string;
     fulfillmentStatus: string;
     total: number;
+    subtotal?: number;
+    discountAmount?: number;
+    shippingAmount?: number;
+    taxAmount?: number;
     currency: string;
     itemsCount: number;
     createdAt: string;
@@ -908,7 +916,29 @@ function ProfilePageContent() {
                           </div>
                           <div className="text-right ml-4">
                             <p className="text-lg font-bold text-gray-900">
-                              {formatPrice(order.total, (order.currency || 'AMD') as CurrencyCode)}
+                              {(() => {
+                                // Calculate total without shipping: subtotal - discount + tax
+                                // If we have subtotal, discountAmount, taxAmount, use them
+                                // Otherwise, use order.total and subtract shippingAmount if available
+                                const currency = (order.currency || 'AMD') as CurrencyCode;
+                                
+                                if (order.subtotal !== undefined && order.discountAmount !== undefined && order.taxAmount !== undefined) {
+                                  // Calculate total without shipping
+                                  const subtotalAMD = convertPrice(order.subtotal, 'USD', 'AMD');
+                                  const discountAMD = convertPrice(order.discountAmount, 'USD', 'AMD');
+                                  const taxAMD = convertPrice(order.taxAmount, 'USD', 'AMD');
+                                  const totalWithoutShippingAMD = subtotalAMD - discountAMD + taxAMD;
+                                  const totalDisplay = currency === 'AMD' ? totalWithoutShippingAMD : convertPrice(totalWithoutShippingAMD, 'AMD', currency);
+                                  return formatPriceInCurrency(totalDisplay, currency);
+                                } else {
+                                  // Fallback: use order.total and subtract shippingAmount if available
+                                  const totalAMD = convertPrice(order.total, 'USD', 'AMD');
+                                  const shippingAMD = order.shippingAmount || 0;
+                                  const totalWithoutShippingAMD = totalAMD - shippingAMD;
+                                  const totalDisplay = currency === 'AMD' ? totalWithoutShippingAMD : convertPrice(totalWithoutShippingAMD, 'AMD', currency);
+                                  return formatPriceInCurrency(totalDisplay, currency);
+                                }
+                              })()}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">{t('profile.dashboard.viewDetails')}</p>
                           </div>
@@ -1200,7 +1230,29 @@ function ProfilePageContent() {
                     </div>
                     <div className="text-right ml-4">
                       <p className="text-lg font-bold text-gray-900">
-                        {formatPrice(order.total, (order.currency || 'AMD') as CurrencyCode)}
+                        {(() => {
+                          // Calculate total without shipping: subtotal - discount + tax
+                          // If we have subtotal, discountAmount, taxAmount, use them
+                          // Otherwise, use order.total and subtract shippingAmount if available
+                          const currency = (order.currency || 'AMD') as CurrencyCode;
+                          
+                          if (order.subtotal !== undefined && order.discountAmount !== undefined && order.taxAmount !== undefined) {
+                            // Calculate total without shipping
+                            const subtotalAMD = convertPrice(order.subtotal, 'USD', 'AMD');
+                            const discountAMD = convertPrice(order.discountAmount, 'USD', 'AMD');
+                            const taxAMD = convertPrice(order.taxAmount, 'USD', 'AMD');
+                            const totalWithoutShippingAMD = subtotalAMD - discountAMD + taxAMD;
+                            const totalDisplay = currency === 'AMD' ? totalWithoutShippingAMD : convertPrice(totalWithoutShippingAMD, 'AMD', currency);
+                            return formatPriceInCurrency(totalDisplay, currency);
+                          } else {
+                            // Fallback: use order.total and subtract shippingAmount if available
+                            const totalAMD = convertPrice(order.total, 'USD', 'AMD');
+                            const shippingAMD = order.shippingAmount || 0;
+                            const totalWithoutShippingAMD = totalAMD - shippingAMD;
+                            const totalDisplay = currency === 'AMD' ? totalWithoutShippingAMD : convertPrice(totalWithoutShippingAMD, 'AMD', currency);
+                            return formatPriceInCurrency(totalDisplay, currency);
+                          }
+                        })()}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{t('profile.dashboard.viewDetails')}</p>
                     </div>

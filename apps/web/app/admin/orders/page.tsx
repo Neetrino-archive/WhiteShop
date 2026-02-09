@@ -15,6 +15,10 @@ interface Order {
   paymentStatus: string;
   fulfillmentStatus: string;
   total: number;
+  subtotal?: number;
+  discountAmount?: number;
+  shippingAmount?: number;
+  taxAmount?: number;
   currency: string;
   customerEmail: string;
   customerPhone: string;
@@ -677,7 +681,25 @@ export default function OrdersPage() {
                           <div className="mt-1 text-xs text-blue-600">{t('admin.orders.viewOrderDetails')}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {formatCurrency(order.total, order.currency, 'USD')}
+                          {(() => {
+                            // Calculate total without shipping: subtotal - discount + tax
+                            // If we have subtotal, discountAmount, taxAmount, use them
+                            // Otherwise, use order.total and subtract shippingAmount if available
+                            if (order.subtotal !== undefined && order.discountAmount !== undefined && order.taxAmount !== undefined) {
+                              // Calculate total without shipping
+                              const subtotalAMD = convertPrice(order.subtotal, 'USD', 'AMD');
+                              const discountAMD = convertPrice(order.discountAmount, 'USD', 'AMD');
+                              const taxAMD = convertPrice(order.taxAmount, 'USD', 'AMD');
+                              const totalWithoutShippingAMD = subtotalAMD - discountAMD + taxAMD;
+                              return formatCurrency(totalWithoutShippingAMD, order.currency, 'AMD');
+                            } else {
+                              // Fallback: use order.total and subtract shippingAmount if available
+                              const totalAMD = convertPrice(order.total, 'USD', 'AMD');
+                              const shippingAMD = order.shippingAmount || 0;
+                              const totalWithoutShippingAMD = totalAMD - shippingAMD;
+                              return formatCurrency(totalWithoutShippingAMD, order.currency, 'AMD');
+                            }
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {order.itemsCount}
