@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button, Input, Card } from '@shop/ui';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { apiClient } from '../../lib/api-client';
-import { formatPrice, formatPriceInCurrency, convertPrice, type CurrencyCode } from '../../lib/currency';
+import { formatPrice, formatPriceInCurrency, convertPrice, getStoredCurrency, type CurrencyCode } from '../../lib/currency';
 import { ProfileMenuDrawer } from '../../components/ProfileMenuDrawer';
 import { UserAvatar } from '../../components/UserAvatar';
 import { useTranslation } from '../../lib/i18n-client';
@@ -197,6 +197,9 @@ function ProfilePageContent() {
   const [orderDetailsError, setOrderDetailsError] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
 
+  // Currency state
+  const [currency, setCurrency] = useState<CurrencyCode>(() => getStoredCurrency());
+
 
   // Redirect if not logged in
   useEffect(() => {
@@ -219,6 +222,34 @@ function ProfilePageContent() {
       loadProfile();
     }
   }, [isLoggedIn, authLoading]);
+
+  // Initialize currency and listen for currency changes
+  useEffect(() => {
+    const updateCurrency = () => {
+      const newCurrency = getStoredCurrency();
+      console.log('💱 [PROFILE] Currency updated to:', newCurrency);
+      setCurrency(newCurrency);
+    };
+    
+    // Load currency on mount
+    updateCurrency();
+    
+    // Listen for currency changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('currency-updated', updateCurrency);
+      // Also listen for currency rates updates
+      const handleCurrencyRatesUpdate = () => {
+        console.log('💱 [PROFILE] Currency rates updated, refreshing currency...');
+        updateCurrency();
+      };
+      window.addEventListener('currency-rates-updated', handleCurrencyRatesUpdate);
+      
+      return () => {
+        window.removeEventListener('currency-updated', updateCurrency);
+        window.removeEventListener('currency-rates-updated', handleCurrencyRatesUpdate);
+      };
+    }
+  }, []);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -820,7 +851,7 @@ function ProfilePageContent() {
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="text-sm font-medium text-gray-600">{t('profile.dashboard.totalSpent')}</p>
                       <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 break-words overflow-wrap-anywhere">
-                        {formatPrice(dashboardData.stats.totalSpent, 'AMD')}
+                        {formatPriceInCurrency(dashboardData.stats.totalSpent, currency)}
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -920,7 +951,6 @@ function ProfilePageContent() {
                                 // Calculate total without shipping: subtotal - discount + tax
                                 // If we have subtotal, discountAmount, taxAmount, use them
                                 // Otherwise, use order.total and subtract shippingAmount if available
-                                const currency = (order.currency || 'AMD') as CurrencyCode;
                                 
                                 if (order.subtotal !== undefined && order.discountAmount !== undefined && order.taxAmount !== undefined) {
                                   // Calculate total without shipping
@@ -1234,7 +1264,6 @@ function ProfilePageContent() {
                           // Calculate total without shipping: subtotal - discount + tax
                           // If we have subtotal, discountAmount, taxAmount, use them
                           // Otherwise, use order.total and subtract shippingAmount if available
-                          const currency = (order.currency || 'AMD') as CurrencyCode;
                           
                           if (order.subtotal !== undefined && order.discountAmount !== undefined && order.taxAmount !== undefined) {
                             // Calculate total without shipping
@@ -1496,13 +1525,11 @@ function ProfilePageContent() {
                                     {t('profile.orderDetails.quantity')}: {item.quantity} × {(() => {
                                       // Item price is stored in USD, convert to display currency
                                       const priceAMD = convertPrice(item.price, 'USD', 'AMD');
-                                      const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                       const priceDisplay = currency === 'AMD' ? priceAMD : convertPrice(priceAMD, 'AMD', currency);
                                       return formatPriceInCurrency(priceDisplay, currency);
                                     })()} = {(() => {
                                       // Item total is stored in USD, convert to display currency
                                       const totalAMD = convertPrice(item.total, 'USD', 'AMD');
-                                      const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                       const totalDisplay = currency === 'AMD' ? totalAMD : convertPrice(totalAMD, 'AMD', currency);
                                       return formatPriceInCurrency(totalDisplay, currency);
                                     })()}
@@ -1529,7 +1556,6 @@ function ProfilePageContent() {
                                   {(() => {
                                     // Subtotal is stored in USD, convert to AMD
                                     const subtotalAMD = convertPrice(selectedOrder.totals.subtotal, 'USD', 'AMD');
-                                    const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                     const subtotalDisplay = currency === 'AMD' ? subtotalAMD : convertPrice(subtotalAMD, 'AMD', currency);
                                     return formatPriceInCurrency(subtotalDisplay, currency);
                                   })()}
@@ -1542,7 +1568,6 @@ function ProfilePageContent() {
                                     -{(() => {
                                       // Discount is stored in USD, convert to AMD
                                       const discountAMD = convertPrice(selectedOrder.totals.discount, 'USD', 'AMD');
-                                      const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                       const discountDisplay = currency === 'AMD' ? discountAMD : convertPrice(discountAMD, 'AMD', currency);
                                       return formatPriceInCurrency(discountDisplay, currency);
                                     })()}
@@ -1557,7 +1582,6 @@ function ProfilePageContent() {
                                     : (() => {
                                         // Shipping is stored in AMD
                                         const shippingAMD = selectedOrder.totals.shipping;
-                                        const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                         const shippingDisplay = currency === 'AMD' ? shippingAMD : convertPrice(shippingAMD, 'AMD', currency);
                                         return formatPriceInCurrency(shippingDisplay, currency) + (selectedOrder.shippingAddress?.city ? ` (${selectedOrder.shippingAddress.city})` : '');
                                       })()}
@@ -1569,7 +1593,6 @@ function ProfilePageContent() {
                                   {(() => {
                                     // Tax is stored in USD, convert to AMD
                                     const taxAMD = convertPrice(selectedOrder.totals.tax, 'USD', 'AMD');
-                                    const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                     const taxDisplay = currency === 'AMD' ? taxAMD : convertPrice(taxAMD, 'AMD', currency);
                                     return formatPriceInCurrency(taxDisplay, currency);
                                   })()}
@@ -1587,7 +1610,6 @@ function ProfilePageContent() {
                                       const shippingAMD = selectedOrder.totals.shipping; // Already in AMD
                                       const taxAMD = convertPrice(selectedOrder.totals.tax, 'USD', 'AMD');
                                       const totalAMD = subtotalAMD - discountAMD + shippingAMD + taxAMD;
-                                      const currency = (selectedOrder.totals.currency || 'AMD') as CurrencyCode;
                                       const totalDisplay = currency === 'AMD' ? totalAMD : convertPrice(totalAMD, 'AMD', currency);
                                       return formatPriceInCurrency(totalDisplay, currency);
                                     })()}

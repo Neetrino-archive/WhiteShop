@@ -6,7 +6,7 @@ import { useAuth } from '../../../lib/auth/AuthContext';
 import { Card, Button } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
 import { useTranslation } from '../../../lib/i18n-client';
-import { formatPriceInCurrency, convertPrice, CurrencyCode } from '../../../lib/currency';
+import { formatPriceInCurrency, convertPrice, getStoredCurrency, initializeCurrencyRates, CurrencyCode } from '../../../lib/currency';
 
 interface Order {
   id: string;
@@ -105,6 +105,7 @@ export default function OrdersPage() {
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState<CurrencyCode>(getStoredCurrency());
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,6 +170,37 @@ export default function OrdersPage() {
     }
   }, [page, statusFilter, paymentStatusFilter, searchQuery, sortBy, sortOrder]);
 
+  // Initialize currency rates and listen for currency changes
+  useEffect(() => {
+    const updateCurrency = () => {
+      const newCurrency = getStoredCurrency();
+      console.log('💱 [ADMIN ORDERS] Currency updated to:', newCurrency);
+      setCurrency(newCurrency);
+    };
+    
+    // Initialize currency rates
+    initializeCurrencyRates().catch(console.error);
+    
+    // Load currency on mount
+    updateCurrency();
+    
+    // Listen for currency changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('currency-updated', updateCurrency);
+      // Also listen for currency rates updates
+      const handleCurrencyRatesUpdate = () => {
+        console.log('💱 [ADMIN ORDERS] Currency rates updated, refreshing currency...');
+        updateCurrency();
+      };
+      window.addEventListener('currency-rates-updated', handleCurrencyRatesUpdate);
+      
+      return () => {
+        window.removeEventListener('currency-updated', updateCurrency);
+        window.removeEventListener('currency-rates-updated', handleCurrencyRatesUpdate);
+      };
+    }
+  }, []);
+
   useEffect(() => {
     if (isLoggedIn && isAdmin) {
       fetchOrders();
@@ -176,15 +208,13 @@ export default function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isAdmin, page, statusFilter, paymentStatusFilter, searchQuery, sortBy, sortOrder]);
 
-  const formatCurrency = (amount: number, currency: string = 'AMD', fromCurrency: CurrencyCode = 'USD') => {
+  const formatCurrency = (amount: number, orderCurrency: string = 'AMD', fromCurrency: CurrencyCode = 'USD') => {
+    // Use the selected display currency instead of order currency
+    const displayCurrency = currency;
+    
     // Order subtotal and tax are stored in USD, but shipping and total are in AMD
     // We need to handle conversion based on the source currency
-    const currencyCode = (currency || 'AMD') as CurrencyCode;
-    
-    // If currency is AMD and fromCurrency is USD, convert USD to AMD
-    // If currency is AMD and fromCurrency is AMD, use formatPriceInCurrency (no conversion)
-    // Otherwise, convert from fromCurrency to target currency
-    if (currencyCode === 'AMD') {
+    if (displayCurrency === 'AMD') {
       if (fromCurrency === 'USD') {
         // Convert USD to AMD
         const convertedAmount = convertPrice(amount, 'USD', 'AMD');
@@ -194,9 +224,17 @@ export default function OrdersPage() {
         return formatPriceInCurrency(amount, 'AMD');
       }
     } else {
-      // Convert from fromCurrency to target currency
-      const convertedAmount = convertPrice(amount, fromCurrency, currencyCode);
-      return formatPriceInCurrency(convertedAmount, currencyCode);
+      // Convert from fromCurrency to display currency
+      if (fromCurrency === 'USD') {
+        // First convert USD to AMD, then to display currency
+        const amdAmount = convertPrice(amount, 'USD', 'AMD');
+        const convertedAmount = convertPrice(amdAmount, 'AMD', displayCurrency);
+        return formatPriceInCurrency(convertedAmount, displayCurrency);
+      } else {
+        // Already in AMD, convert to display currency
+        const convertedAmount = convertPrice(amount, 'AMD', displayCurrency);
+        return formatPriceInCurrency(convertedAmount, displayCurrency);
+      }
     }
   };
 
@@ -835,7 +873,10 @@ export default function OrdersPage() {
                                 const shippingAMD = orderDetails.totals.shipping; // Already in AMD
                                 const taxAMD = convertPrice(orderDetails.totals.tax, 'USD', 'AMD');
                                 const totalAMD = subtotalAMD - discountAMD + shippingAMD + taxAMD;
-                                return formatPriceInCurrency(totalAMD, (orderDetails.currency || 'AMD') as CurrencyCode);
+                                
+                                // Convert to display currency if needed
+                                const totalDisplay = currency === 'AMD' ? totalAMD : convertPrice(totalAMD, 'AMD', currency);
+                                return formatPriceInCurrency(totalDisplay, currency);
                               })() : formatCurrency(orderDetails.total, orderDetails.currency || 'AMD', 'USD')}
                             </div>
                             <div>
@@ -927,7 +968,7 @@ export default function OrdersPage() {
                             {orderDetails.payment.method && <div>{t('admin.orders.orderDetails.method')} {orderDetails.payment.method}</div>}
                             <div>
                               {t('admin.orders.orderDetails.amount')}{' '}
-                              {formatCurrency(orderDetails.payment.amount, orderDetails.payment.currency || 'AMD')}
+                              {formatCurrency(orderDetails.payment.amount, orderDetails.payment.currency || 'AMD', 'AMD')}
                             </div>
                             <div>{t('admin.orders.orderDetails.status')} {orderDetails.payment.status}</div>
                             {orderDetails.payment.cardBrand && orderDetails.payment.cardLast4 && (
@@ -981,7 +1022,10 @@ export default function OrdersPage() {
                                   const shippingAMD = orderDetails.totals.shipping; // Already in AMD
                                   const taxAMD = convertPrice(orderDetails.totals.tax, 'USD', 'AMD');
                                   const totalAMD = subtotalAMD - discountAMD + shippingAMD + taxAMD;
-                                  return formatPriceInCurrency(totalAMD, (orderDetails.totals.currency || 'AMD') as CurrencyCode);
+                                  
+                                  // Convert to display currency if needed
+                                  const totalDisplay = currency === 'AMD' ? totalAMD : convertPrice(totalAMD, 'AMD', currency);
+                                  return formatPriceInCurrency(totalDisplay, currency);
                                 })()}
                               </span>
                             </div>
@@ -1076,10 +1120,10 @@ export default function OrdersPage() {
                                     </td>
                                     <td className="px-3 py-2 text-right">{item.quantity}</td>
                                     <td className="px-3 py-2 text-right">
-                                      {formatCurrency(item.unitPrice, orderDetails.currency || 'AMD')}
+                                      {formatCurrency(item.unitPrice, orderDetails.currency || 'AMD', 'USD')}
                                     </td>
                                     <td className="px-3 py-2 text-right">
-                                      {formatCurrency(item.total, orderDetails.currency || 'AMD')}
+                                      {formatCurrency(item.total, orderDetails.currency || 'AMD', 'USD')}
                                     </td>
                                   </tr>
                                 );
