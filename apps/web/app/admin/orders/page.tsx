@@ -6,6 +6,7 @@ import { useAuth } from '../../../lib/auth/AuthContext';
 import { Card, Button } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
 import { useTranslation } from '../../../lib/i18n-client';
+import { formatPriceInCurrency, convertPrice, CurrencyCode } from '../../../lib/currency';
 
 interface Order {
   id: string;
@@ -42,6 +43,14 @@ interface OrderDetails {
   fulfillmentStatus: string;
   total: number;
   currency: string;
+  totals?: {
+    subtotal: number;
+    discount: number;
+    shipping: number;
+    tax: number;
+    total: number;
+    currency: string;
+  };
   customerEmail?: string;
   customerPhone?: string;
   customer?: {
@@ -163,12 +172,28 @@ export default function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isAdmin, page, statusFilter, paymentStatusFilter, searchQuery, sortBy, sortOrder]);
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = 'AMD', fromCurrency: CurrencyCode = 'USD') => {
+    // Order subtotal and tax are stored in USD, but shipping and total are in AMD
+    // We need to handle conversion based on the source currency
+    const currencyCode = (currency || 'AMD') as CurrencyCode;
+    
+    // If currency is AMD and fromCurrency is USD, convert USD to AMD
+    // If currency is AMD and fromCurrency is AMD, use formatPriceInCurrency (no conversion)
+    // Otherwise, convert from fromCurrency to target currency
+    if (currencyCode === 'AMD') {
+      if (fromCurrency === 'USD') {
+        // Convert USD to AMD
+        const convertedAmount = convertPrice(amount, 'USD', 'AMD');
+        return formatPriceInCurrency(convertedAmount, 'AMD');
+      } else {
+        // Already in AMD, no conversion needed
+        return formatPriceInCurrency(amount, 'AMD');
+      }
+    } else {
+      // Convert from fromCurrency to target currency
+      const convertedAmount = convertPrice(amount, fromCurrency, currencyCode);
+      return formatPriceInCurrency(convertedAmount, currencyCode);
+    }
   };
 
   // Helper function to get color hex/rgb from color name
@@ -652,7 +677,7 @@ export default function OrdersPage() {
                           <div className="mt-1 text-xs text-blue-600">{t('admin.orders.viewOrderDetails')}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {formatCurrency(order.total, order.currency)}
+                          {formatCurrency(order.total, order.currency, 'USD')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {order.itemsCount}
@@ -781,7 +806,15 @@ export default function OrdersPage() {
                             </div>
                             <div>
                               <span className="font-medium">{t('admin.orders.orderDetails.total')}</span>{' '}
-                              {formatCurrency(orderDetails.total, orderDetails.currency || 'AMD')}
+                              {orderDetails.totals ? (() => {
+                                // Total is stored as USD + AMD (mixed), so we need to recalculate it properly
+                                const subtotalAMD = convertPrice(orderDetails.totals.subtotal, 'USD', 'AMD');
+                                const discountAMD = convertPrice(orderDetails.totals.discount, 'USD', 'AMD');
+                                const shippingAMD = orderDetails.totals.shipping; // Already in AMD
+                                const taxAMD = convertPrice(orderDetails.totals.tax, 'USD', 'AMD');
+                                const totalAMD = subtotalAMD - discountAMD + shippingAMD + taxAMD;
+                                return formatPriceInCurrency(totalAMD, (orderDetails.currency || 'AMD') as CurrencyCode);
+                              })() : formatCurrency(orderDetails.total, orderDetails.currency || 'AMD', 'USD')}
                             </div>
                             <div>
                               <span className="font-medium">{t('admin.orders.orderDetails.status')}</span> {orderDetails.status}
@@ -886,6 +919,54 @@ export default function OrdersPage() {
                         )}
                       </Card>
                     </div>
+
+                    {/* Order Summary */}
+                    {orderDetails.totals && (
+                      <Card className="p-4 md:p-6">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('orders.orderSummary.title')}</h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-sm text-gray-700">
+                            <span>{t('orders.orderSummary.subtotal')}</span>
+                            <span>{formatCurrency(orderDetails.totals.subtotal, orderDetails.totals.currency || 'AMD', 'USD')}</span>
+                          </div>
+                          {orderDetails.totals.discount > 0 && (
+                            <div className="flex justify-between text-sm text-gray-700">
+                              <span>{t('orders.orderSummary.discount')}</span>
+                              <span>-{formatCurrency(orderDetails.totals.discount, orderDetails.totals.currency || 'AMD', 'USD')}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-sm text-gray-700">
+                            <span>{t('orders.orderSummary.shipping')}</span>
+                            <span>
+                              {orderDetails.shippingMethod === 'pickup' 
+                                ? t('checkout.shipping.freePickup')
+                                : formatCurrency(orderDetails.totals.shipping, orderDetails.totals.currency || 'AMD', 'AMD') + (orderDetails.shippingAddress?.city ? ` (${orderDetails.shippingAddress.city})` : '')}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-700">
+                            <span>{t('orders.orderSummary.tax')}</span>
+                            <span>{formatCurrency(orderDetails.totals.tax, orderDetails.totals.currency || 'AMD', 'USD')}</span>
+                          </div>
+                          <div className="border-t border-gray-200 pt-3 mt-3">
+                            <div className="flex justify-between text-base font-bold text-gray-900">
+                              <span>{t('orders.orderSummary.total')}</span>
+                              <span>
+                                {(() => {
+                                  // Total is stored as USD + AMD (mixed), so we need to recalculate it properly
+                                  // Subtotal and tax are in USD, shipping is in AMD
+                                  const subtotalAMD = convertPrice(orderDetails.totals.subtotal, 'USD', 'AMD');
+                                  const discountAMD = convertPrice(orderDetails.totals.discount, 'USD', 'AMD');
+                                  const shippingAMD = orderDetails.totals.shipping; // Already in AMD
+                                  const taxAMD = convertPrice(orderDetails.totals.tax, 'USD', 'AMD');
+                                  const totalAMD = subtotalAMD - discountAMD + shippingAMD + taxAMD;
+                                  return formatPriceInCurrency(totalAMD, (orderDetails.totals.currency || 'AMD') as CurrencyCode);
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
 
                     {/* Items */}
                     <Card className="p-4 md:p-6">
