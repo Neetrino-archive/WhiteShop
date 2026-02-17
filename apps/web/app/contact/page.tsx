@@ -6,7 +6,7 @@ import type { FormEvent, ChangeEvent } from 'react';
 import { getStoredLanguage } from '@/lib/language';
 import { useTranslation } from '../../lib/i18n-client';
 import { apiClient } from '../../lib/api-client';
-import contactData from '../../../../config/contact.json';
+import contactData from '../../../../json/contact.json';
 
 // Icons
 const PhoneIcon = () => (

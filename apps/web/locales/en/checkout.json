@@ -21,9 +21,9 @@
   },
   "placeholders": {
     "phone": "+374XXXXXXXX",
-    "address": "Street address, apartment, suite, etc.",
+    "address": "Street, apartment, office, etc.",
     "city": "City",
-    "postalCode": "Postal code",
+    "postalCode": "Postal Code",
     "cardNumber": "1234 5678 9012 3456",
     "expiryDate": "MM/YY",
     "cvv": "123",
@@ -33,20 +33,20 @@
     "storePickup": "Store Pickup",
     "storePickupDescription": "Pick up your order from our store (Free)",
     "delivery": "Delivery",
-    "deliveryDescription": "We'll deliver your order to your address",
-    "freePickup": "Free (Pickup)",
+    "deliveryDescription": "We will deliver your order to your address",
+    "freePickup": "Free (Store Pickup)",
     "loading": "Loading...",
-    "enterCity": "Enter city"
+    "enterCity": "Enter City"
   },
   "payment": {
     "cashOnDelivery": "Cash on Delivery",
-    "cashOnDeliveryDescription": "Pay with cash when you receive your order",
+    "cashOnDeliveryDescription": "Pay cash when you receive your order",
     "idram": "Idram",
     "idramDescription": "Pay with Idram wallet or card",
     "arca": "ArCa",
     "arcaDescription": "Pay with ArCa card",
     "paymentDetails": "Payment Details",
-    "enterCardDetails": "Enter your card details to complete the payment"
+    "enterCardDetails": "Enter your card details to complete payment"
   },
   "summary": {
     "items": "Items",
@@ -66,12 +66,12 @@
     "completeOrder": "Complete Your Order",
     "confirmOrder": "Confirm Order",
     "cardDetails": "{method} Card Details",
-    "closeModal": "Close modal"
+    "closeModal": "Close Window"
   },
   "messages": {
-    "cashOnDeliveryInfo": "Cash on Delivery: You will pay with cash when you receive your order. No card details required.",
-    "cashOnDeliveryPickup": "Cash on Delivery: You will pay with cash when you pick up your order. No card details required.",
-    "storePickupInfo": "Store Pickup: You will pick up your order from our store. Shipping is free."
+    "cashOnDeliveryInfo": "Cash on Delivery: You will pay cash when you receive your order. Card details are not required.",
+    "cashOnDeliveryPickup": "Cash on Delivery: You will pay cash when you pick up your order. Card details are not required.",
+    "storePickupInfo": "Store Pickup: You will pick up your order from our store. Delivery is free."
   },
   "errors": {
     "firstNameRequired": "First name is required",
@@ -90,16 +90,11 @@
     "cardNumberRequired": "Card number is required",
     "cardExpiryRequired": "Card expiry date is required",
     "cvvRequired": "CVV is required",
-    "cardHolderNameRequired": "Cardholder name is required",
+    "cardHolderNameRequired": "Card holder name is required",
     "fillShippingAddress": "Please fill in all shipping address fields",
     "cartEmpty": "Cart is empty",
     "failedToLoadCart": "Failed to load cart",
     "failedToCreateOrder": "Failed to create order. Please try again."
   }
 }
-
-
-
-
-
 

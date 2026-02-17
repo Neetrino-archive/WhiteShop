@@ -9,23 +9,20 @@
   "quantity": "Quantity",
   "addToCart": "Add to Cart",
   "outOfStock": "Out of Stock",
-  "selectColor": "Please select color",
-  "selectSize": "Please select size",
+  "selectColor": "Please select a color",
+  "selectSize": "Please select a size",
   "selectColorAndSize": "Please select size and color",
-  "selectOptions": "Select Options",
+  "selectOptions": "Select options",
   "adding": "Adding...",
   "addedToCart": "Added to cart",
   "addedToWishlist": "Added to wishlist",
   "removedFromWishlist": "Removed from wishlist",
   "addedToCompare": "Added to compare",
   "removedFromCompare": "Removed from compare",
-  "compareListFull": "Compare list is full",
+  "compareListFull": "Comparison list is full",
   "errorAddingToCart": "Error adding to cart",
   "pcs": "pcs",
   "outOfStockLabel": "Out of Stock",
-  "noRelatedProducts": "No related products found"
+  "noRelatedProducts": "Related products not found"
 }
-
-
-
 

@@ -9,6 +9,7 @@ import { formatPrice, getStoredCurrency } from '../lib/currency';
 import { apiClient } from '../lib/api-client';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useTranslation } from '../lib/i18n-client';
+import { getColorHex } from '../lib/colorMap';
 import { CompareIcon } from './icons/CompareIcon';
 import { CartIcon as CartPngIcon } from './icons/CartIcon';
 import { ProductLabels } from './ProductLabels';
@@ -43,48 +44,9 @@ const WISHLIST_KEY = 'shop_wishlist';
 const COMPARE_KEY = 'shop_compare';
 
 // Color mapping for common color names
-const colorMap: Record<string, string> = {
-  beige: '#F5F5DC',
-  black: '#000000',
-  blue: '#0000FF',
-  brown: '#A52A2A',
-  gray: '#808080',
-  grey: '#808080',
-  green: '#008000',
-  red: '#FF0000',
-  white: '#FFFFFF',
-  yellow: '#FFFF00',
-  orange: '#FFA500',
-  pink: '#FFC0CB',
-  purple: '#800080',
-  navy: '#000080',
-  maroon: '#800000',
-  teal: '#008080',
-  cyan: '#00FFFF',
-  magenta: '#FF00FF',
-  lime: '#00FF00',
-  olive: '#808000',
-  silver: '#C0C0C0',
-  gold: '#FFD700',
-  tan: '#D2B48C',
-  khaki: '#F0E68C',
-  coral: '#FF7F50',
-  salmon: '#FA8072',
-  turquoise: '#40E0D0',
-  violet: '#EE82EE',
-  indigo: '#4B0082',
-  crimson: '#DC143C',
-  lavender: '#E6E6FA',
-  peach: '#FFE5B4',
-  mint: '#98FB98',
-  ivory: '#FFFFF0',
-  cream: '#FFFDD0',
-};
 
-const getColorHex = (colorName: string): string => {
-  const normalized = colorName.toLowerCase().trim();
-  return colorMap[normalized] || '#CCCCCC';
-};
+
+
 
 // Иконки
 const WishlistIcon = ({ filled = false }: { filled?: boolean }) => (
@@ -471,7 +433,7 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
                     <div
                       key={index}
                       className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0 overflow-hidden"
-                      style={imageUrl ? {} : { backgroundColor: colorHex }}
+                      style={imageUrl ? {} : { backgroundColor: colorHex || '#CCCCCC' }}
                       title={colorValue}
                       aria-label={`Color: ${colorValue}`}
                     >
@@ -482,7 +444,8 @@ export function ProductCard({ product, viewMode = 'grid-3' }: ProductCardProps) 
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             // Fallback to color hex if image fails to load
-                            (e.target as HTMLImageElement).style.backgroundColor = colorHex;
+                            const fallbackColor = colorHex || '#CCCCCC';
+                            (e.target as HTMLImageElement).style.backgroundColor = fallbackColor;
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
                         />

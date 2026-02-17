@@ -11,7 +11,7 @@
     "submit": "Sign In",
     "submitting": "Signing in...",
     "noAccount": "Don't have an account?",
-    "signUp": "Sign up"
+    "signUp": "Sign Up"
   },
   "errors": {
     "emailOrPhoneRequired": "Please enter your email or phone number",
@@ -19,9 +19,4 @@
     "loginFailed": "Login failed. Please try again."
   }
 }
-
-
-
-
-
 

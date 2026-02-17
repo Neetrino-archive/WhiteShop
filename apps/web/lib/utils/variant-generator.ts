@@ -1,4 +1,5 @@
 import { db } from "@white-shop/db";
+import { logger } from "./logger";
 
 /**
  * Generate all possible combinations of AttributeValues
@@ -41,7 +42,7 @@ export function generateAttributeCombinations(
 export async function getProductAttributeValues(
   productId: string
 ): Promise<Map<string, string[]>> {
-  console.log('🔍 [VARIANT GENERATOR] Getting attribute values for product:', productId);
+  logger.debug('Getting attribute values for product', { productId });
 
   const product = await db.product.findUnique({
     where: { id: productId },
@@ -61,7 +62,7 @@ export async function getProductAttributeValues(
   });
 
   if (!product) {
-    console.warn('⚠️ [VARIANT GENERATOR] Product not found:', productId);
+    logger.warn('Product not found', { productId });
     return new Map();
   }
 
@@ -69,9 +70,9 @@ export async function getProductAttributeValues(
 
   for (const productAttribute of product.productAttributes) {
     const attributeKey = productAttribute.attribute.key;
-    const valueIds = productAttribute.attribute.values.map((v) => v.id);
+    const valueIds = productAttribute.attribute.values.map((v: { id: string }) => v.id);
     attributeValueMap.set(attributeKey, valueIds);
-    console.log(`✅ [VARIANT GENERATOR] Attribute "${attributeKey}" has ${valueIds.length} values`);
+    logger.debug(`Attribute "${attributeKey}" has ${valueIds.length} values`, { attributeKey, valueCount: valueIds.length });
   }
 
   return attributeValueMap;
@@ -89,7 +90,7 @@ export async function findOrCreateAttributeValue(
   valueString: string,
   locale: string = "en"
 ): Promise<string | null> {
-  console.log(`🔍 [VARIANT GENERATOR] Finding/Creating AttributeValue: ${attributeKey} = ${valueString}`);
+  logger.debug('Finding/Creating AttributeValue', { attributeKey, valueString });
 
   // Find attribute by key
   const attribute = await db.attribute.findUnique({
@@ -104,13 +105,13 @@ export async function findOrCreateAttributeValue(
   });
 
   if (!attribute) {
-    console.warn(`⚠️ [VARIANT GENERATOR] Attribute not found: ${attributeKey}`);
+    logger.warn('Attribute not found', { attributeKey });
     return null;
   }
 
   // If value exists, return its ID
   if (attribute.values.length > 0) {
-    console.log(`✅ [VARIANT GENERATOR] Found existing AttributeValue: ${attribute.values[0].id}`);
+    logger.debug('Found existing AttributeValue', { attributeValueId: attribute.values[0].id });
     return attribute.values[0].id;
   }
 
@@ -128,7 +129,7 @@ export async function findOrCreateAttributeValue(
     },
   });
 
-  console.log(`✅ [VARIANT GENERATOR] Created new AttributeValue: ${newValue.id}`);
+  logger.info('Created new AttributeValue', { attributeValueId: newValue.id });
   return newValue.id;
 }
 
@@ -157,12 +158,12 @@ export async function generateVariantsFromAttributes(
   published: boolean;
   options: Array<{ valueId: string }>;
 }>> {
-  console.log('🚀 [VARIANT GENERATOR] Generating variants for product:', productId);
+  logger.debug('Generating variants for product', { productId });
 
   const attributeValueMap = await getProductAttributeValues(productId);
 
   if (attributeValueMap.size === 0) {
-    console.log('⚠️ [VARIANT GENERATOR] No attributes found, creating single variant');
+    logger.warn('No attributes found, creating single variant', { productId });
     return [
       {
         ...variantData,
@@ -179,7 +180,7 @@ export async function generateVariantsFromAttributes(
   // Generate all combinations
   const combinations = generateAttributeCombinations(attributeValueGroups);
 
-  console.log(`✅ [VARIANT GENERATOR] Generated ${combinations.length} variant combinations`);
+  logger.info('Generated variant combinations', { productId, combinationCount: combinations.length });
 
   // Create variant data for each combination
   const variants = combinations.map((combination, index) => {

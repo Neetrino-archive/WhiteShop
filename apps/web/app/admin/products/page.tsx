@@ -1,51 +1,17 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import type { FormEvent } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../../lib/auth/AuthContext';
-import { Card, Button } from '@shop/ui';
 import { apiClient } from '../../../lib/api-client';
 import { AdminMenuDrawer } from '../../../components/AdminMenuDrawer';
 import { getAdminMenuTABS } from '../admin-menu.config';
 import { useTranslation } from '../../../lib/i18n-client';
-import { formatPrice, getStoredCurrency, initializeCurrencyRates, type CurrencyCode } from '../../../lib/currency';
-
-interface Product {
-  id: string;
-  slug: string;
-  title: string;
-  published: boolean;
-  featured?: boolean;
-  price: number;
-  stock: number;
-  discountPercent?: number;
-  compareAtPrice?: number | null;
-  colorStocks?: Array<{
-    color: string;
-    stock: number;
-  }>;
-  image: string | null;
-  createdAt: string;
-}
-
-interface ProductsResponse {
-  data: Product[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-
-interface Category {
-  id: string;
-  title: string;
-  slug: string;
-  parentId: string | null;
-  requiresSizes: boolean;
-}
+import { getStoredCurrency, initializeCurrencyRates, type CurrencyCode } from '../../../lib/currency';
+import { ProductFilters } from './components/ProductFilters';
+import { ProductsTable } from './components/ProductsTable';
+import { useProductHandlers } from './hooks/useProductHandlers';
+import type { Product, ProductsResponse, Category } from './types';
 
 export default function ProductsPage() {
   const { t } = useTranslation();
@@ -69,7 +35,7 @@ export default function ProductsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [togglingAllFeatured, setTogglingAllFeatured] = useState(false);
-  const [currency, setCurrency] = useState<CurrencyCode>('USD'); // Default для SSR
+  const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
   useEffect(() => {
     if (!isLoading) {
@@ -97,7 +63,6 @@ export default function ProductsPage() {
     // Listen for currency changes
     if (typeof window !== 'undefined') {
       window.addEventListener('currency-updated', updateCurrency);
-      // Also listen for currency rates updates
       const handleCurrencyRatesUpdate = () => {
         console.log('💱 [ADMIN PRODUCTS] Currency rates updated, refreshing currency...');
         updateCurrency();
@@ -157,7 +122,6 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isAdmin, page, search, selectedCategories, skuSearch, stockFilter, sortBy, minPrice, maxPrice]);
 
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -170,7 +134,6 @@ export default function ProductsPage() {
         params.search = search.trim();
       }
 
-      // Եթե ընտրված են category-ներ, ուղարկում ենք comma-separated string
       if (selectedCategories.size > 0) {
         params.category = Array.from(selectedCategories).join(',');
       }
@@ -187,7 +150,6 @@ export default function ProductsPage() {
         params.maxPrice = maxPrice.trim();
       }
 
-      // Սերվերը հիմա աջակցում է միայն createdAt դաշտով սորտավորում
       if (sortBy && sortBy.startsWith('createdAt')) {
         params.sort = sortBy;
       }
@@ -198,7 +160,7 @@ export default function ProductsPage() {
       
       let filteredProducts = response.data || [];
 
-      // Stock filter (client-side, քանի որ API-ն չի աջակցում stock filter-ը)
+      // Stock filter (client-side)
       if (stockFilter !== 'all') {
         filteredProducts = filteredProducts.filter(product => {
           const getTotalStock = (p: Product) => {
@@ -227,80 +189,10 @@ export default function ProductsPage() {
     }
   };
 
-  /**
-   * Helper function to process image URLs
-   * Handles relative paths, absolute URLs and base64
-   */
-  const processImageUrl = (url: string | null) => {
-    if (!url) return '';
-    if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    // For relative paths, ensure they start with a slash
-    return url.startsWith('/') ? url : `/${url}`;
-  };
-
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-    fetchProducts();
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (products.length === 0) return;
-    setSelectedIds(prev => {
-      const allIds = products.map(p => p.id);
-      const hasAll = allIds.every(id => prev.has(id));
-      return hasAll ? new Set() : new Set(allIds);
-    });
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(t('admin.products.bulkDeleteConfirm').replace('{count}', selectedIds.size.toString()))) return;
-    setBulkDeleting(true);
-    try {
-      const ids = Array.from(selectedIds);
-      const results = await Promise.allSettled(
-        ids.map(id => apiClient.delete(`/api/v1/admin/products/${id}`))
-      );
-      const failed = results.filter(r => r.status === 'rejected');
-      setSelectedIds(new Set());
-      await fetchProducts();
-      alert(t('admin.products.bulkDeleteFinished').replace('{success}', (ids.length - failed.length).toString()).replace('{total}', ids.length.toString()));
-    } catch (err) {
-      console.error('❌ [ADMIN] Bulk delete products error:', err);
-      alert(t('admin.products.failedToDelete'));
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
-
-  const handlePriceFilter = () => {
-    setPage(1);
-    fetchProducts();
-  };
-
-  const handleClearPriceFilter = () => {
-    setMinPrice('');
-    setMaxPrice('');
-    setPage(1);
-    // fetchProducts will be called automatically by useEffect
-  };
-
-  // Լոկալ (client-side) սորտավորում Product / Price / Stock սյունակների համար
+  // Client-side sorting for Product / Price / Stock columns
   const sortedProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
 
-    // Եթե սորտը createdAt-ով է, թողնում ենք ինչպես սերվերն է բերել
     if (!sortBy || sortBy.startsWith('createdAt')) {
       return products;
     }
@@ -328,7 +220,6 @@ export default function ProductsPage() {
       });
     } else if (field === 'stock') {
       cloned.sort((a, b) => {
-        // Հաշվարկում ենք ընդհանուր stock-ը (colorStocks-ի գումարը կամ պարզ stock-ը)
         const getTotalStock = (product: Product) => {
           if (product.colorStocks && product.colorStocks.length > 0) {
             return product.colorStocks.reduce((sum, cs) => sum + (cs.stock || 0), 0);
@@ -345,13 +236,6 @@ export default function ProductsPage() {
     return cloned;
   }, [products, sortBy]);
 
-  /**
-   * Սորտավորում սյունակի վերնագրերի սեղմման ժամանակ
-   * field === 'price' → price-asc / price-desc
-   * field === 'createdAt' → createdAt-asc / createdAt-desc
-   * field === 'title' → title-asc / title-desc
-   * field === 'stock' → stock-asc / stock-desc
-   */
   const handleHeaderSort = (field: 'price' | 'createdAt' | 'title' | 'stock') => {
     setPage(1);
 
@@ -395,112 +279,24 @@ export default function ProductsPage() {
     });
   };
 
-  const handleDeleteProduct = async (productId: string, productTitle: string) => {
-    if (!confirm(t('admin.products.deleteConfirm').replace('{title}', productTitle))) {
-      return;
-    }
+  const handlers = useProductHandlers({
+    products,
+    setProducts,
+    fetchProducts,
+    selectedIds,
+    setSelectedIds,
+    setPage,
+    setBulkDeleting,
+    setTogglingAllFeatured,
+  });
 
-    try {
-      await apiClient.delete(`/api/v1/admin/products/${productId}`);
-      console.log('✅ [ADMIN] Product deleted successfully');
-      
-      // Refresh products list
-      fetchProducts();
-      
-      alert(t('admin.products.deletedSuccess'));
-    } catch (err: any) {
-      console.error('❌ [ADMIN] Error deleting product:', err);
-      alert(t('admin.products.errorDeleting').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
-    }
+  const handleClearFilters = () => {
+    setSearch('');
+    setSelectedCategories(new Set());
+    setSkuSearch('');
+    setStockFilter('all');
+    setPage(1);
   };
-
-  const handleTogglePublished = async (productId: string, currentStatus: boolean, productTitle: string) => {
-    try {
-      const newStatus = !currentStatus;
-      
-      // При изменении только статуса published, отправляем только статус
-      // Это позволяет избежать проблем с валидацией вариантов (например, требование размеров)
-      // Варианты и другие данные останутся без изменений на сервере
-      const updateData = {
-        published: newStatus,
-      };
-      
-      console.log(`🔄 [ADMIN] Updating product status to ${newStatus ? 'published' : 'draft'}`);
-      
-      await apiClient.put(`/api/v1/admin/products/${productId}`, updateData);
-      
-      console.log(`✅ [ADMIN] Product ${newStatus ? 'published' : 'unpublished'} successfully`);
-      
-      // Refresh products list
-      fetchProducts();
-      
-      if (newStatus) {
-        alert(t('admin.products.productPublished').replace('{title}', productTitle));
-      } else {
-        alert(t('admin.products.productDraft').replace('{title}', productTitle));
-      }
-    } catch (err: any) {
-      console.error('❌ [ADMIN] Error updating product status:', err);
-      alert(t('admin.products.errorUpdatingStatus').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
-    }
-  };
-
-  const handleToggleFeatured = async (productId: string, currentStatus: boolean, productTitle: string) => {
-    try {
-      const newStatus = !currentStatus;
-      
-      const updateData = {
-        featured: newStatus,
-      };
-      
-      console.log(`⭐ [ADMIN] Updating product featured status to ${newStatus ? 'featured' : 'not featured'}`);
-      
-      await apiClient.put(`/api/v1/admin/products/${productId}`, updateData);
-      
-      console.log(`✅ [ADMIN] Product ${newStatus ? 'marked as featured' : 'removed from featured'} successfully`);
-      
-      // Refresh products list
-      fetchProducts();
-    } catch (err: any) {
-      console.error('❌ [ADMIN] Error updating product featured status:', err);
-      alert(t('admin.products.errorUpdatingFeatured').replace('{message}', err.message || t('admin.common.unknownErrorFallback')));
-    }
-  };
-
-  const handleToggleAllFeatured = async () => {
-    if (products.length === 0) return;
-
-    // Check if all products are featured
-    const allFeatured = products.every(p => p.featured);
-    const newStatus = !allFeatured;
-
-    setTogglingAllFeatured(true);
-    try {
-      const results = await Promise.allSettled(
-        products.map(product => 
-          apiClient.put(`/api/v1/admin/products/${product.id}`, { featured: newStatus })
-        )
-      );
-      
-      const failed = results.filter(r => r.status === 'rejected');
-      const successCount = products.length - failed.length;
-      
-      console.log(`✅ [ADMIN] Toggle all featured completed: ${successCount}/${products.length} successful`);
-      
-      // Refresh products list
-      await fetchProducts();
-      
-      if (failed.length > 0) {
-        alert(t('admin.products.featuredToggleFinished').replace('{success}', successCount.toString()).replace('{total}', products.length.toString()));
-      }
-    } catch (err) {
-      console.error('❌ [ADMIN] Toggle all featured error:', err);
-      alert(t('admin.products.failedToUpdateFeatured'));
-    } finally {
-      setTogglingAllFeatured(false);
-    }
-  };
-
 
   if (isLoading) {
     return (
@@ -538,13 +334,7 @@ export default function ProductsPage() {
             {(search || selectedCategories.size > 0 || skuSearch || stockFilter !== 'all') && (
               <button
                 type="button"
-                onClick={() => {
-                  setSearch('');
-                  setSelectedCategories(new Set());
-                  setSkuSearch('');
-                  setStockFilter('all');
-                  setPage(1);
-                }}
+                onClick={handleClearFilters}
                 className="text-sm text-gray-600 hover:text-gray-900 underline"
               >
                 {t('admin.products.clearAll')}
@@ -590,511 +380,65 @@ export default function ProductsPage() {
 
           {/* Main Content */}
           <div className="flex-1 min-w-0">
-        {/* Search and Filters */}
-        <div className="space-y-4 mb-6">
-          {/* Search Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {t('admin.products.searchByTitleOrSlug')}
-              </label>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSearch(e as any);
-                  }
-                }}
-                placeholder={t('admin.products.searchPlaceholder')}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {t('admin.products.searchBySku')}
-              </label>
-              <input
-                type="text"
-                value={skuSearch}
-                onChange={(e) => {
-                  setSkuSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder={t('admin.products.skuPlaceholder')}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-            </div>
-          </div>
+            <ProductFilters
+              search={search}
+              setSearch={setSearch}
+              skuSearch={skuSearch}
+              setSkuSearch={setSkuSearch}
+              selectedCategories={selectedCategories}
+              setSelectedCategories={setSelectedCategories}
+              categories={categories}
+              categoriesLoading={categoriesLoading}
+              categoriesExpanded={categoriesExpanded}
+              setCategoriesExpanded={setCategoriesExpanded}
+              stockFilter={stockFilter}
+              setStockFilter={setStockFilter}
+              minPrice={minPrice}
+              setMinPrice={setMinPrice}
+              maxPrice={maxPrice}
+              setMaxPrice={setMaxPrice}
+              selectedIds={selectedIds}
+              handleSearch={handlers.handleSearch}
+              handleBulkDelete={handlers.handleBulkDelete}
+              handleClearFilters={handleClearFilters}
+              bulkDeleting={bulkDeleting}
+              setPage={setPage}
+            />
 
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Category Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {t('admin.products.filterByCategory')}
-              </label>
-              <div className="relative" data-category-dropdown>
-                <button
-                  type="button"
-                  onClick={() => setCategoriesExpanded(!categoriesExpanded)}
-                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm flex items-center justify-between"
-                >
-                  <span className="text-gray-700">
-                    {selectedCategories.size === 0
-                      ? t('admin.products.allCategories')
-                      : selectedCategories.size === 1
-                      ? categories.find(c => selectedCategories.has(c.id))?.title || '1 category'
-                      : `${selectedCategories.size} categories`}
-                  </span>
-                  <svg
-                    className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-                      categoriesExpanded ? 'transform rotate-180' : ''
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {categoriesExpanded && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {categoriesLoading ? (
-                      <div className="p-3 text-sm text-gray-500 text-center">{t('admin.products.loadingCategories')}</div>
-                    ) : categories.length === 0 ? (
-                      <div className="p-3 text-sm text-gray-500 text-center">{t('admin.products.noCategoriesAvailable')}</div>
-                    ) : (
-                      <div className="p-2">
-                        <div className="space-y-1">
-                          {categories.map((category) => (
-                            <label
-                              key={category.id}
-                              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedCategories.has(category.id)}
-                                onChange={(e) => {
-                                  const newSelected = new Set(selectedCategories);
-                                  if (e.target.checked) {
-                                    newSelected.add(category.id);
-                                  } else {
-                                    newSelected.delete(category.id);
-                                  }
-                                  setSelectedCategories(newSelected);
-                                  setPage(1);
-                                }}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-gray-700">{category.title}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Stock Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {t('admin.products.filterByStock')}
-              </label>
-              <select
-                value={stockFilter}
-                onChange={(e) => {
-                  setStockFilter(e.target.value as 'all' | 'inStock' | 'outOfStock');
-                  setPage(1);
-                }}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+            {/* Add New Product Button */}
+            <div className="mb-6">
+              <button
+                onClick={() => router.push('/admin/products/add')}
+                className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 font-medium text-sm"
               >
-                <option value="all">{t('admin.products.allProducts')}</option>
-                <option value="inStock">{t('admin.products.inStock')}</option>
-                <option value="outOfStock">{t('admin.products.outOfStock')}</option>
-              </select>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                {t('admin.products.addNewProduct')}
+              </button>
             </div>
-          </div>
 
-          {/* Selected Products and Delete */}
-          {selectedIds.size > 0 && (
-            <div className="px-4 py-3 flex items-center justify-between border border-gray-200 rounded-md bg-white">
-              <div className="text-sm text-gray-700">
-                {t('admin.products.selectedProducts').replace('{count}', selectedIds.size.toString())}
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleBulkDelete}
-                disabled={bulkDeleting}
-                className="text-sm"
-              >
-                {bulkDeleting ? t('admin.products.deleting') : t('admin.products.deleteSelected')}
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Add New Product Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.push('/admin/products/add')}
-            className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 font-medium text-sm"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {t('admin.products.addNewProduct')}
-          </button>
-        </div>
-
-        {/* Products Table */}
-        <Card className="overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p className="text-gray-600">{t('admin.products.loadingProducts')}</p>
-            </div>
-          ) : sortedProducts.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-gray-600">{t('admin.products.noProducts')}</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          aria-label={t('admin.products.selectAll')}
-                          checked={products.length > 0 && products.every(p => selectedIds.has(p.id))}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <button
-                          type="button"
-                          onClick={() => handleHeaderSort('title')}
-                          className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800"
-                        >
-                          <span>{t('admin.products.product')}</span>
-                          <span className="flex flex-col gap-0.5">
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'title-asc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'title-desc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        </button> 
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <button
-                          type="button"
-                          onClick={() => handleHeaderSort('stock')}
-                          className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800"
-                        >
-                          <span>{t('admin.products.stock')}</span>
-                          <span className="flex flex-col gap-0.5">
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'stock-asc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'stock-desc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        </button>
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <button
-                          type="button"
-                          onClick={() => handleHeaderSort('price')}
-                          className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800"
-                        >
-                          <span>{t('admin.products.price')}</span>
-                          <span className="flex flex-col gap-0.5">
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'price-asc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'price-desc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        </button>
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <button
-                          type="button"
-                          onClick={() => handleHeaderSort('createdAt')}
-                          className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800"
-                        >
-                          <span>{t('admin.products.created')}</span>
-                          <span className="flex flex-col gap-0.5">
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'createdAt-asc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                            <svg
-                              className={`w-2.5 h-2.5 ${
-                                sortBy === 'createdAt-desc'
-                                  ? 'text-gray-900'
-                                  : 'text-gray-400'
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        </button>
-                      </th>
-                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('admin.products.featured')}
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider pl-6">
-                        {t('admin.products.actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {sortedProducts.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-4">
-                          <input
-                            type="checkbox"
-                            aria-label={t('admin.products.selectProduct').replace('{title}', product.title)}
-                            checked={selectedIds.has(product.id)}
-                            onChange={() => toggleSelect(product.id)}
-                          />
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {product.image && (
-                              <img
-                                src={processImageUrl(product.image)}
-                                alt={product.title}
-                                className="h-12 w-12 rounded object-cover mr-3"
-                              />
-                            )}
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{product.title}</div>
-                              <div className="text-sm text-gray-500">{product.slug}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-3 py-4">
-                          {product.colorStocks && product.colorStocks.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              {product.colorStocks.map((colorStock) => (
-                                <div
-                                  key={colorStock.color}
-                                  className="px-3 py-1 bg-gray-100 rounded-lg text-sm"
-                                >
-                                  <span className="font-medium text-gray-900">{colorStock.color}:</span>
-                                  <span className="ml-1 text-gray-600">{colorStock.stock} {t('admin.products.pcs')}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">
-                              {product.stock > 0 ? `${product.stock} ${t('admin.products.pcs')}` : `0 ${t('admin.products.pcs')}`}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <div className="text-sm font-medium text-gray-900">
-                              {formatPrice(product.price, currency)}
-                            </div>
-                            {(product.compareAtPrice && product.compareAtPrice > product.price) || 
-                             (product.discountPercent && product.discountPercent > 0) ? (
-                              <div className="text-xs text-gray-500 line-through mt-0.5">
-                                {formatPrice(
-                                  product.compareAtPrice && product.compareAtPrice > product.price
-                                    ? product.compareAtPrice
-                                    : product.price / (1 - (product.discountPercent || 0) / 100),
-                                  currency
-                                )}
-                              </div>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(product.createdAt).toLocaleDateString('hy-AM')}
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => handleToggleFeatured(product.id, product.featured || false, product.title)}
-                            className="inline-flex items-center justify-center w-8 h-8 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
-                            title={product.featured ? t('admin.products.clickToRemoveFeatured') : t('admin.products.clickToMarkFeatured')}
-                          >
-                            <svg
-                              className={`w-6 h-6 transition-all duration-200 ${
-                                product.featured
-                                  ? 'fill-blue-500 text-blue-500 drop-shadow-sm'
-                                  : 'fill-none stroke-blue-400 text-blue-400 opacity-50 hover:opacity-75'
-                              }`}
-                              viewBox="0 0 24 24"
-                              strokeWidth="1.5"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                              />
-                            </svg>
-                          </button>
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => router.push(`/admin/products/add?id=${product.id}`)}
-                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                            >
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              {t('admin.products.edit')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteProduct(product.id, product.title)}
-                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                            >
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              {t('admin.products.delete')}
-                            </Button>
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePublished(product.id, product.published, product.title)}
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                                product.published
-                                  ? 'bg-green-500'
-                                  : 'bg-gray-300'
-                              }`}
-                              title={product.published ? t('admin.products.clickToDraft') : t('admin.products.clickToPublished')}
-                              aria-label={product.published ? `${t('admin.products.published')} - ${t('admin.products.clickToDraft')}` : `${t('admin.products.draft')} - ${t('admin.products.clickToPublished')}`}
-                            >
-                              <span
-                                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ${
-                                  product.published ? 'translate-x-[18px]' : 'translate-x-0.5'
-                                }`}
-                              />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                  <div className="text-sm text-gray-700">
-                    {t('admin.products.showingPage').replace('{page}', meta.page.toString()).replace('{totalPages}', meta.totalPages.toString()).replace('{total}', meta.total.toString())}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      {t('admin.products.previous')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
-                      disabled={page === meta.totalPages}
-                    >
-                      {t('admin.products.next')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </Card>
+            {/* Products Table */}
+            <ProductsTable
+              loading={loading}
+              sortedProducts={sortedProducts}
+              products={products}
+              selectedIds={selectedIds}
+              toggleSelect={handlers.toggleSelect}
+              toggleSelectAll={handlers.toggleSelectAll}
+              sortBy={sortBy}
+              handleHeaderSort={handleHeaderSort}
+              currency={currency}
+              handleDeleteProduct={handlers.handleDeleteProduct}
+              handleTogglePublished={handlers.handleTogglePublished}
+              handleToggleFeatured={handlers.handleToggleFeatured}
+              meta={meta}
+              page={page}
+              setPage={setPage}
+            />
           </div>
         </div>
       </div>
     </div>
   );
 }
-

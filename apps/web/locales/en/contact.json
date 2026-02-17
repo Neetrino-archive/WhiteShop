@@ -1,7 +1,7 @@
 {
   "callToUs": {
-    "title": "Call to Us:",
-    "description": "We're available 24/7, 7 days a week."
+    "title": "Call Us:",
+    "description": "We are available 24/7, 7 days a week."
   },
   "writeToUs": {
     "title": "Write to Us:",
@@ -9,7 +9,7 @@
     "emailLabel": "Email:"
   },
   "headquarter": {
-    "title": "Headquarter:",
+    "title": "Headquarters:",
     "hours": {
       "weekdays": "Monday - Friday: 9:00-20:00",
       "saturday": "Saturday: 11:00 - 15:00"
@@ -30,9 +30,4 @@
     "submitError": "Error: Failed to send message"
   }
 }
-
-
-
-
-
 

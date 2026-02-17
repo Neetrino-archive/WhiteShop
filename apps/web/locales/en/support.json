@@ -7,27 +7,27 @@
     "phone": "Phone",
     "businessHours": "Business Hours",
     "hours": {
-      "weekdays": "Monday - Friday: 9:00 AM - 6:00 PM",
-      "saturday": "Saturday: 10:00 AM - 4:00 PM",
+      "weekdays": "Monday - Friday: 9:00 - 18:00",
+      "saturday": "Saturday: 10:00 - 16:00",
       "sunday": "Sunday: Closed"
     }
   },
   "quickLinks": {
     "title": "Quick Links",
     "faq": "Frequently Asked Questions →",
-    "delivery": "Delivery & Return Information →",
+    "delivery": "Delivery and Returns Information →",
     "returns": "Return Policy →",
     "contact": "Contact Form →"
   },
   "sendMessage": {
-    "title": "Send us a Message",
+    "title": "Send Us a Message",
     "form": {
       "name": "Name",
       "namePlaceholder": "Your name",
       "email": "Email",
       "emailPlaceholder": "your@email.com",
       "subject": "Subject",
-      "subjectPlaceholder": "What can we help you with?",
+      "subjectPlaceholder": "How can we help?",
       "message": "Message",
       "messagePlaceholder": "Please describe your issue or question...",
       "submit": "Send Message"
@@ -38,44 +38,39 @@
     "orderIssues": {
       "title": "Order Issues",
       "items": {
-        "tracking": "Order tracking",
-        "cancellation": "Order cancellation",
-        "modification": "Order modification",
-        "missing": "Missing items"
+        "tracking": "Order Tracking",
+        "cancellation": "Order Cancellation",
+        "modification": "Order Modification",
+        "missing": "Missing Items"
       }
     },
     "accountHelp": {
       "title": "Account Help",
       "items": {
-        "password": "Password reset",
-        "settings": "Account settings",
-        "history": "Order history",
-        "profile": "Profile updates"
+        "password": "Password Reset",
+        "settings": "Account Settings",
+        "history": "Order History",
+        "profile": "Profile Updates"
       }
     },
     "paymentBilling": {
       "title": "Payment & Billing",
       "items": {
-        "methods": "Payment methods",
-        "refund": "Refund status",
-        "billing": "Billing questions",
-        "issues": "Payment issues"
+        "methods": "Payment Methods",
+        "refund": "Refund Status",
+        "billing": "Billing Questions",
+        "issues": "Payment Issues"
       }
     },
     "productQuestions": {
       "title": "Product Questions",
       "items": {
-        "availability": "Product availability",
-        "specifications": "Product specifications",
-        "size": "Size guides",
-        "warranty": "Warranty information"
+        "availability": "Product Availability",
+        "specifications": "Product Specifications",
+        "size": "Size Guides",
+        "warranty": "Warranty Information"
       }
     }
   }
 }
-
-
-
-
-
 

@@ -28,16 +28,29 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Get total count
-    const total = await db.contactMessage.count();
+    let total: number;
+    let messages: any[];
+    
+    try {
+      total = await db.contactMessage.count();
+    } catch (dbError: any) {
+      console.error("❌ [ADMIN MESSAGES] Database count error:", dbError);
+      throw new Error(`Database query failed: ${dbError.message || 'Unknown database error'}. Make sure Prisma Client is generated and migrations are applied.`);
+    }
 
-    // Get messages
-    const messages = await db.contactMessage.findMany({
-      skip,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    try {
+      // Get messages
+      messages = await db.contactMessage.findMany({
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    } catch (dbError: any) {
+      console.error("❌ [ADMIN MESSAGES] Database findMany error:", dbError);
+      throw new Error(`Database query failed: ${dbError.message || 'Unknown database error'}. Make sure Prisma Client is generated and migrations are applied.`);
+    }
 
     const totalPages = Math.ceil(total / limit);
 
@@ -52,6 +65,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("❌ [ADMIN MESSAGES] Error:", error);
+    console.error("❌ [ADMIN MESSAGES] Error stack:", error.stack);
     return NextResponse.json(
       {
         type: error.type || "https://api.shop.am/problems/internal-error",

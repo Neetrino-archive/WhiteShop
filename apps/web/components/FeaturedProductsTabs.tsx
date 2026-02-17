@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api-client';
 import { getStoredLanguage, type LanguageCode } from '../lib/language';
 import { ProductCard } from './ProductCard';
@@ -19,6 +19,8 @@ interface Product {
     name: string;
   } | null;
   colors?: Array<{ value: string; imageUrl?: string | null; colors?: string[] | null }>; // Available colors from variants with imageUrl and colors hex
+  sizes?: Array<{ value: string; imageUrl?: string | null }>; // Available sizes from variants
+  attributes?: Record<string, Array<{ valueId?: string; value: string; label: string; imageUrl?: string | null; colors?: string[] | null }>>; // Other attributes (not color or size)
   originalPrice?: number | null;
   discountPercent?: number | null;
   labels?: Array<{
@@ -98,7 +100,7 @@ export function FeaturedProductsTabs() {
   /**
    * Fetch products based on active filter
    */
-  const fetchProducts = async (filter: string | null) => {
+  const fetchProducts = useCallback(async (filter: string | null) => {
     try {
       setLoading(true);
       setError(null);
@@ -132,7 +134,7 @@ export function FeaturedProductsTabs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language]);
 
   /**
    * Handle tab change
@@ -147,7 +149,7 @@ export function FeaturedProductsTabs() {
   useEffect(() => {
     fetchProducts('new');
     console.log('🧱 [FeaturedProductsTabs] Mobile grid locked to 2 columns on phones');
-  }, []);
+  }, [fetchProducts]);
 
   return (
     <section className="py-16 bg-gray-50">

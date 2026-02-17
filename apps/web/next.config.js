@@ -68,9 +68,10 @@ const nextConfig = {
       };
     }
     
-    // Resolve workspace packages
+    // Resolve workspace packages and path aliases
     config.resolve.alias = {
       ...config.resolve.alias,
+      '@': path.resolve(__dirname, '.'),
       '@shop/ui': path.resolve(__dirname, '../../packages/ui'),
       '@shop/design-tokens': path.resolve(__dirname, '../../packages/design-tokens'),
     };

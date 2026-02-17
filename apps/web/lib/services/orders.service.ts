@@ -95,6 +95,7 @@ class OrdersService {
         
         cartItems = await Promise.all(
           cart.items.map(async (item: {
+            id: string;
             productId: string;
             variantId: string;
             quantity: number;
@@ -628,6 +629,19 @@ class OrdersService {
           options: Array<{
             attributeKey: string | null;
             value: string | null;
+            valueId: string | null;
+            attributeValue: {
+              value: string;
+              imageUrl: string | null;
+              colors: any;
+              translations: Array<{
+                locale: string;
+                label: string;
+              }>;
+              attribute: {
+                key: string;
+              };
+            } | null;
           }>;
         } | null;
       }) => {

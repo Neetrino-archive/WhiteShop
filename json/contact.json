@@ -1,0 +1,15 @@
+{
+  "phone": "+374 XX XXX XXX",
+  "email": "info@shop.am",
+  "address": {
+    "en": "Yerevan, Abovyan 10",
+    "ru": "г. Ереван, ул. Абовяна 10",
+    "am": "Երևան, Աբովյան 10"
+  },
+  "workingHours": {
+    "en": "Mon-Fri 10:00-19:00",
+    "ru": "Пн-Пт 10:00-19:00",
+    "am": "Երկ-Ուրբ 10:00-19:00"
+  }
+}
+

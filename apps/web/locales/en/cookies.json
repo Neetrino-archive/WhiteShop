@@ -1,9 +1,9 @@
 {
   "title": "Cookie Policy",
-  "lastUpdated": "Last updated:",
+  "lastUpdated": "Last Updated:",
   "whatAreCookies": {
-    "title": "What Are Cookies?",
-    "description1": "Cookies are small text files that are placed on your computer or mobile device when you visit a website. They are widely used to make websites work more efficiently and provide information to the website owners.",
+    "title": "What are Cookies?",
+    "description1": "Cookies are small text files that are placed on your computer or mobile device when you visit a website. They are widely used to make websites work more efficiently and to provide information to website owners.",
     "description2": "Cookies allow a website to recognize your device and store some information about your preferences or past actions."
   },
   "howWeUseCookies": {
@@ -12,19 +12,19 @@
     "types": {
       "essential": {
         "title": "Essential Cookies:",
-        "description": "These cookies are necessary for the website to function properly. They enable basic functions like page navigation and access to secure areas of the website."
+        "description": "These cookies are necessary for the website to function properly. They enable basic functions such as page navigation and access to secure areas of the website."
       },
       "performance": {
         "title": "Performance Cookies:",
-        "description": "These cookies help us understand how visitors interact with our website by collecting and reporting information anonymously. This helps us improve the way our website works."
+        "description": "These cookies help us understand how visitors interact with our website by collecting and reporting information anonymously. This helps us improve our website's performance."
       },
       "functionality": {
-        "title": "Functionality Cookies:",
+        "title": "Functional Cookies:",
         "description": "These cookies allow the website to remember choices you make (such as your language preference or region) and provide enhanced, personalized features."
       },
       "targeting": {
         "title": "Targeting/Advertising Cookies:",
-        "description": "These cookies may be set through our site by our advertising partners to build a profile of your interests and show you relevant content on other sites."
+        "description": "These cookies may be set on our site by our advertising partners to build a profile of your interests and show you relevant content on other sites."
       }
     }
   },
@@ -48,7 +48,7 @@
     "description": "You have the right to decide whether to accept or reject cookies. You can exercise your cookie rights by setting your preferences in your browser settings.",
     "browserSettings": {
       "title": "Browser Settings",
-      "description1": "Most web browsers allow you to control cookies through their settings preferences. However, limiting cookies may impact your experience on our website.",
+      "description1": "Most web browsers allow you to control cookies through their settings preferences. However, limiting cookies may affect your experience on our website.",
       "description2": "Here are links to instructions for managing cookies in popular browsers:",
       "browsers": {
         "chrome": "Google Chrome",
@@ -59,7 +59,7 @@
     },
     "optOutTools": {
       "title": "Opt-Out Tools",
-      "description": "You can also opt out of certain third-party cookies by visiting the {digitalAdvertisingAlliance} or {yourOnlineChoices}.",
+      "description": "You can also opt out of some third-party cookies by visiting {digitalAdvertisingAlliance} or {yourOnlineChoices}.",
       "digitalAdvertisingAlliance": "Digital Advertising Alliance",
       "yourOnlineChoices": "Your Online Choices"
     }
@@ -81,16 +81,11 @@
   },
   "updates": {
     "title": "Updates to This Policy",
-    "description": "We may update this Cookie Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. Please revisit this Cookie Policy regularly to stay informed about our use of cookies."
+    "description": "We may update this Cookie Policy from time to time to reflect changes in our practices or for other operational, legal or regulatory reasons. Please revisit this Cookie Policy regularly to stay informed about our use of cookies."
   },
   "contact": {
     "title": "Contact Us",
-    "description": "If you have any questions about our use of cookies, please contact us at:"
+    "description": "If you have questions about our use of cookies, please contact us at:"
   }
 }
-
-
-
-
-
 

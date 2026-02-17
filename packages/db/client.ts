@@ -23,14 +23,9 @@ export const db =
     errorFormat: "pretty",
   });
 
-// Handle Prisma connection errors
-db.$connect().catch((error) => {
-  console.error("❌ [DB] Prisma connection error:", {
-    message: error?.message,
-    code: error?.code,
-    name: error?.name,
-  });
-});
+// Prisma Client connects automatically on first query (lazy connection)
+// No need to call $connect() explicitly as it can cause issues in Next.js API routes
+// Connection will be established automatically when the first database query is made
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
 

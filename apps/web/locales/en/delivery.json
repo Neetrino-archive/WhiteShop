@@ -1,14 +1,14 @@
 {
-  "title": "Delivery & Return",
+  "title": "Delivery and Returns",
   "deliveryInformation": {
     "title": "Delivery Information",
-    "freeDelivery": "Free delivery",
-    "deliveryCost": "Delivery cost: {price}",
+    "freeDelivery": "Free Delivery",
+    "deliveryCost": "Delivery Cost: {price}",
     "freeForOrdersAbove": "Free for orders above {amount}",
-    "estimatedDelivery": "Estimated delivery: {days} {daysText}",
+    "estimatedDelivery": "Estimated Delivery: {days} {daysText}",
     "day": "day",
     "days": "days",
-    "pickupLocations": "Pickup locations:"
+    "pickupLocations": "Pickup Locations:"
   },
   "returnPolicy": {
     "title": "Return Policy",
@@ -19,48 +19,43 @@
     "returnConditions": {
       "title": "Return Conditions",
       "items": [
-        "Items must be unworn, unwashed, and in original packaging",
+        "Items must be unworn, unwashed and in original packaging",
         "All tags and labels must be attached",
         "Items must be in saleable condition",
-        "Proof of purchase is required"
+        "Proof of purchase required"
       ]
     },
     "howToReturn": {
       "title": "How to Return",
       "steps": [
         "Contact our customer service team to initiate a return",
-        "Receive a return authorization number",
-        "Package the items securely with the return form",
+        "Get a return authorization number",
+        "Package items securely with return form",
         "Ship the package to our return address",
-        "Once received, we'll process your refund within 5-7 business days"
+        "After receipt we will process your return within 5-7 business days"
       ]
     },
     "refundProcess": {
       "title": "Refund Process",
-      "description": "Refunds will be processed to the original payment method. Please allow 5-7 business days for the refund to appear in your account."
+      "description": "Refunds will be processed to the original payment method. Please allow 5-7 business days for the refund to appear on your account."
     },
     "nonReturnableItems": {
       "title": "Non-Returnable Items",
       "items": [
-        "Personalized or customized items",
+        "Personalized or custom-made items",
         "Items without original packaging",
-        "Items damaged by misuse",
-        "Sale items (unless defective)"
+        "Items damaged due to misuse",
+        "Discounted items (unless defective)"
       ]
     }
   },
   "contact": {
     "title": "Need Help?",
-    "description": "If you have any questions about delivery or returns, please don't hesitate to contact us.",
+    "description": "If you have questions about delivery or returns, please don't hesitate to contact us.",
     "email": "Email:",
     "phone": "Phone:",
-    "hours": "Hours:",
-    "hoursValue": "Monday - Friday, 9 AM - 6 PM"
+    "hours": "Business Hours:",
+    "hoursValue": "Monday - Friday, 9:00 - 18:00"
   }
 }
-
-
-
-
-
 

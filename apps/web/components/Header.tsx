@@ -10,7 +10,7 @@ import { useAuth } from '../lib/auth/AuthContext';
 import { apiClient } from '../lib/api-client';
 import { CART_KEY, getCompareCount, getWishlistCount } from '../lib/storageCounts';
 import { LanguageSwitcherHeader } from './LanguageSwitcherHeader';
-import contactData from '../../../config/contact.json';
+import contactData from '../../../json/contact.json';
 import { Instagram, Facebook, Linkedin } from 'lucide-react';
 import { CompareIcon } from './icons/CompareIcon';
 import { CartIcon } from './icons/CartIcon';

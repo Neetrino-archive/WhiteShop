@@ -43,6 +43,7 @@ const getLanguageIcon = (code: LanguageCode): React.ReactNode => {
         unoptimized
       />
     ),
+    ka: '🌐', // Georgian - fallback icon since it's not displayed in header
   };
   return icons[code] || '🌐';
 };
@@ -54,6 +55,7 @@ const getLanguageColor = (code: LanguageCode, isActive: boolean): string => {
       en: 'bg-blue-50 border-blue-200',
       hy: 'bg-orange-50 border-orange-200',
       ru: 'bg-red-50 border-red-200',
+      ka: 'bg-gray-100 border-gray-200', // Georgian - fallback color since it's not displayed in header
     };
     return colors[code] || 'bg-gray-100 border-gray-200';
   }

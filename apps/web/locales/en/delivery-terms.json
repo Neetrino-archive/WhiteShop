@@ -1,55 +1,50 @@
 {
   "title": "Delivery Terms",
-  "lastUpdated": "Last updated:",
+  "lastUpdated": "Last Updated:",
   "overview": {
     "title": "Overview",
-    "description": "These Delivery Terms explain how we process, ship, and deliver your orders, including expected timelines, fees, and responsibilities."
+    "description": "These Delivery Terms explain how we process, ship and deliver your orders, including expected timelines, fees and responsibilities."
   },
   "shippingOptions": {
     "title": "Shipping Options",
-    "description": "Available options are shown at checkout and may include:",
+    "description": "Available options are displayed at checkout and may include:",
     "options": {
-      "standard": "Standard delivery with estimated timeframes per region.",
-      "express": "Express delivery where supported.",
-      "pickup": "In-store pickup or local courier (if available in your area)."
+      "standard": "Standard shipping with estimated timelines by region.",
+      "express": "Express shipping where supported.",
+      "pickup": "Store pickup or local courier (if available in your area)."
     }
   },
   "processingTimes": {
     "title": "Processing Times",
     "items": {
       "typical": "Orders are typically processed within 1–2 business days after payment confirmation.",
-      "weekends": "Orders placed on weekends or holidays process on the next business day.",
-      "preorder": "Pre-order items ship based on the estimated availability shown at purchase."
+      "weekends": "Orders placed on weekends or holidays are processed on the next business day.",
+      "preorder": "Pre-order items ship based on estimated availability shown at purchase."
     }
   },
   "deliveryTimeframes": {
     "title": "Delivery Timeframes",
-    "description": "Delivery estimates vary by destination and selected method. Tracking details are provided when the order is shipped. Actual delivery times may differ due to carrier capacity or local customs."
+    "description": "Estimated delivery times vary by destination and selected method. Tracking details are provided when the order ships. Actual delivery times may vary due to carrier capacity or local customs procedures."
   },
   "shippingFees": {
-    "title": "Shipping Fees & Duties",
+    "title": "Shipping Fees and Duties",
     "items": {
       "costs": "Shipping costs are calculated at checkout based on destination and service level.",
-      "duties": "Import duties, taxes, or brokerage fees may apply for international shipments and are the recipient's responsibility.",
-      "promotional": "Promotional free-shipping offers apply only as stated in the promotion."
+      "duties": "Import duties, taxes or brokerage fees may apply for international shipments and are the recipient's responsibility.",
+      "promotional": "Promotional free shipping offers apply only as stated in the promotion."
     }
   },
   "delaysDamageLoss": {
-    "title": "Delays, Damage, or Loss",
+    "title": "Delays, Damage or Loss",
     "items": {
-      "delays": "We are not liable for delays caused by carriers, weather, or customs inspections.",
-      "damage": "Please inspect packages on delivery and report visible damage to the carrier and our support team within 48 hours.",
+      "delays": "We are not responsible for delays caused by carriers, weather conditions or customs inspections.",
+      "damage": "Please inspect packages upon delivery and report visible damage to the carrier and our support team within 48 hours.",
       "loss": "If a shipment is lost, contact us with your order number; we will coordinate with the carrier to resolve the issue."
     }
   },
   "contact": {
     "title": "Contact Us",
-    "description": "For delivery questions or special handling requests, reach us at"
+    "description": "For shipping questions or special handling requests, contact us at"
   }
 }
-
-
-
-
-
 

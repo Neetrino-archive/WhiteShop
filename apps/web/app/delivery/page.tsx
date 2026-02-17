@@ -2,7 +2,7 @@
 
 import { Card } from '@shop/ui';
 import { useEffect, useState } from 'react';
-import shippingData from '../../config/shipping.json';
+import shippingData from '../../../../json/shipping.json';
 import { useTranslation } from '../../lib/i18n-client';
 import { getStoredLanguage } from '../../lib/language';
 import { loadTranslation } from '../../lib/i18n';

@@ -1,9 +1,9 @@
 {
   "title": "Privacy Policy",
-  "lastUpdated": "Last updated:",
+  "lastUpdated": "Last Updated:",
   "introduction": {
     "title": "Introduction",
-    "description1": "At White-Shop, we are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services.",
+    "description1": "At White-Shop, we are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose and protect your information when you visit our website and use our services.",
     "description2": "Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the site."
   },
   "informationWeCollect": {
@@ -18,16 +18,16 @@
         "contact": "Contact us for customer support",
         "surveys": "Participate in surveys or promotions"
       },
-      "details": "This information may include your name, email address, phone number, shipping address, billing address, and payment information."
+      "details": "This information may include your name, email address, phone number, shipping address, billing address and payment information."
     },
     "automaticallyCollected": {
       "title": "Automatically Collected Information",
-      "description": "When you visit our website, we automatically collect certain information about your device, including information about your web browser, IP address, time zone, and some of the cookies that are installed on your device."
+      "description": "When you visit our website, we automatically collect certain information about your device, including information about your web browser, IP address, time zone and some cookies that are installed on your device."
     }
   },
   "howWeUse": {
     "title": "How We Use Your Information",
-    "description": "We use the information we collect to:",
+    "description": "We use the collected information to:",
     "items": {
       "process": "Process and fulfill your orders",
       "confirmations": "Send you order confirmations and updates",
@@ -40,9 +40,9 @@
   },
   "informationSharing": {
     "title": "Information Sharing and Disclosure",
-    "description": "We do not sell, trade, or rent your personal information to third parties. We may share your information only in the following circumstances:",
+    "description": "We do not sell, trade or rent your personal information to third parties. We may share your information only in the following circumstances:",
     "items": {
-      "providers": "With service providers who assist us in operating our website and conducting our business",
+      "providers": "With service providers who help us operate our website and conduct our business",
       "law": "When required by law or to protect our rights",
       "transfer": "In connection with a business transfer or merger",
       "consent": "With your explicit consent"
@@ -50,7 +50,7 @@
   },
   "dataSecurity": {
     "title": "Data Security",
-    "description": "We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet or electronic storage is 100% secure."
+    "description": "We implement appropriate technical and organizational security measures to protect your personal information from unauthorized access, alteration, disclosure or destruction. However, no method of transmission over the Internet or electronic storage is 100% secure."
   },
   "yourRights": {
     "title": "Your Rights",
@@ -67,7 +67,7 @@
   "cookies": {
     "title": "Cookies",
     "description1": "We use cookies and similar tracking technologies to track activity on our website and hold certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.",
-    "description2": "For more information about our use of cookies, please see our",
+    "description2": "For more detailed information about our use of cookies, please see our",
     "linkText": "Cookie Policy"
   },
   "contact": {
@@ -75,9 +75,4 @@
     "description": "If you have questions about this Privacy Policy, please contact us at:"
   }
 }
-
-
-
-
-
 

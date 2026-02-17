@@ -1,4 +1,5 @@
 import { db } from "@white-shop/db";
+import { logger } from "./logger";
 
 // Cache to track if table check has been performed
 let tableChecked = false;
@@ -30,14 +31,15 @@ export async function ensureProductAttributesTable(): Promise<boolean> {
     tableChecked = true;
     tableExists = true;
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If table doesn't exist, create it
+    const prismaError = error as { code?: string; message?: string };
     if (
-      error?.code === 'P2021' || 
-      error?.message?.includes('does not exist') ||
-      error?.message?.includes('product_attributes')
+      prismaError?.code === 'P2021' || 
+      prismaError?.message?.includes('does not exist') ||
+      prismaError?.message?.includes('product_attributes')
     ) {
-      console.log('🔧 [DB UTILS] product_attributes table not found, creating...');
+      logger.info('product_attributes table not found, creating...');
       
       try {
         // Create table if it doesn't exist
@@ -131,14 +133,15 @@ export async function ensureProductAttributesTable(): Promise<boolean> {
           `;
         }
 
-        console.log('✅ [DB UTILS] product_attributes table created successfully');
+        logger.info('product_attributes table created successfully');
         tableChecked = true;
         tableExists = true;
         return true;
-      } catch (createError: any) {
-        console.error('❌ [DB UTILS] Failed to create product_attributes table:', {
-          message: createError?.message,
-          code: createError?.code,
+      } catch (createError: unknown) {
+        const prismaCreateError = createError as { message?: string; code?: string };
+        logger.error('Failed to create product_attributes table', {
+          message: prismaCreateError?.message,
+          code: prismaCreateError?.code,
         });
         tableChecked = true;
         tableExists = false;
@@ -147,9 +150,9 @@ export async function ensureProductAttributesTable(): Promise<boolean> {
     }
     
     // Other errors - log and return false
-    console.error('❌ [DB UTILS] Unexpected error checking product_attributes table:', {
-      message: error?.message,
-      code: error?.code,
+    logger.error('Unexpected error checking product_attributes table', {
+      message: prismaError?.message,
+      code: prismaError?.code,
     });
     tableChecked = true;
     tableExists = false;
@@ -175,14 +178,15 @@ export async function ensureProductReviewsTable(): Promise<boolean> {
     reviewsTableChecked = true;
     reviewsTableExists = true;
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If table doesn't exist, create it
+    const prismaError = error as { code?: string; message?: string };
     if (
-      error?.code === 'P2021' || 
-      error?.message?.includes('does not exist') ||
-      error?.message?.includes('product_reviews')
+      prismaError?.code === 'P2021' || 
+      prismaError?.message?.includes('does not exist') ||
+      prismaError?.message?.includes('product_reviews')
     ) {
-      console.log('🔧 [DB UTILS] product_reviews table not found, creating...');
+      logger.info('product_reviews table not found, creating...');
       
       try {
         // Create table if it doesn't exist
@@ -284,14 +288,15 @@ export async function ensureProductReviewsTable(): Promise<boolean> {
           `;
         }
 
-        console.log('✅ [DB UTILS] product_reviews table created successfully');
+        logger.info('product_reviews table created successfully');
         reviewsTableChecked = true;
         reviewsTableExists = true;
         return true;
-      } catch (createError: any) {
-        console.error('❌ [DB UTILS] Failed to create product_reviews table:', {
-          message: createError?.message,
-          code: createError?.code,
+      } catch (createError: unknown) {
+        const prismaCreateError = createError as { message?: string; code?: string };
+        logger.error('Failed to create product_reviews table', {
+          message: prismaCreateError?.message,
+          code: prismaCreateError?.code,
         });
         reviewsTableChecked = true;
         reviewsTableExists = false;
@@ -300,9 +305,9 @@ export async function ensureProductReviewsTable(): Promise<boolean> {
     }
     
     // Other errors - log and return false
-    console.error('❌ [DB UTILS] Unexpected error checking product_reviews table:', {
-      message: error?.message,
-      code: error?.code,
+    logger.error('Unexpected error checking product_reviews table', {
+      message: prismaError?.message,
+      code: prismaError?.code,
     });
     reviewsTableChecked = true;
     reviewsTableExists = false;
@@ -329,15 +334,16 @@ export async function ensureProductVariantAttributesColumn(): Promise<boolean> {
     attributesColumnChecked = true;
     attributesColumnExists = true;
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If column doesn't exist, create it
+    const prismaError = error as { code?: string; message?: string };
     if (
-      error?.code === 'P2022' || 
-      error?.message?.includes('does not exist') ||
-      error?.message?.includes('product_variants.attributes') ||
-      (error?.message?.includes('column') && error?.message?.includes('attributes'))
+      prismaError?.code === 'P2022' || 
+      prismaError?.message?.includes('does not exist') ||
+      prismaError?.message?.includes('product_variants.attributes') ||
+      (prismaError?.message?.includes('column') && prismaError?.message?.includes('attributes'))
     ) {
-      console.log('🔧 [DB UTILS] product_variants.attributes column not found, creating...');
+      logger.info('product_variants.attributes column not found, creating...');
       
       try {
         // Add the attributes JSONB column if it doesn't exist
@@ -346,14 +352,15 @@ export async function ensureProductVariantAttributesColumn(): Promise<boolean> {
           ADD COLUMN IF NOT EXISTS "attributes" JSONB
         `;
         
-        console.log('✅ [DB UTILS] product_variants.attributes column created successfully');
+        logger.info('product_variants.attributes column created successfully');
         attributesColumnChecked = true;
         attributesColumnExists = true;
         return true;
-      } catch (createError: any) {
-        console.error('❌ [DB UTILS] Failed to create product_variants.attributes column:', {
-          message: createError?.message,
-          code: createError?.code,
+      } catch (createError: unknown) {
+        const prismaCreateError = createError as { message?: string; code?: string };
+        logger.error('Failed to create product_variants.attributes column', {
+          message: prismaCreateError?.message,
+          code: prismaCreateError?.code,
         });
         attributesColumnChecked = true;
         attributesColumnExists = false;
@@ -362,9 +369,9 @@ export async function ensureProductVariantAttributesColumn(): Promise<boolean> {
     }
     
     // Other errors - log and return false
-    console.error('❌ [DB UTILS] Unexpected error checking product_variants.attributes column:', {
-      message: error?.message,
-      code: error?.code,
+    logger.error('Unexpected error checking product_variants.attributes column', {
+      message: prismaError?.message,
+      code: prismaError?.code,
     });
     attributesColumnChecked = true;
     attributesColumnExists = false;

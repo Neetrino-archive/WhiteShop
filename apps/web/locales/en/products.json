@@ -1,64 +1,65 @@
 {
   "filters": {
     "price": {
-      "title": "Filter By Price",
+      "title": "Filter by Price",
       "priceLabel": "Price:"
     },
     "color": {
-      "title": "Filter By Color",
+      "title": "Filter by Color",
       "noColors": "No colors available",
       "loading": "Loading..."
     },
     "size": {
-      "title": "Filter By Size",
+      "title": "Filter by Size",
       "noSizes": "No sizes available",
       "loading": "Loading..."
     },
     "brand": {
-      "title": "Filter By Brand",
-      "searchPlaceholder": "Find a Brand",
+      "title": "Filter by Brand",
+      "searchPlaceholder": "Find brand",
       "noBrands": "No brands found",
       "loading": "Loading..."
     }
   },
   "header": {
-    "allProducts": "All products ({total})",
-    "clearFilters": "Clear filters",
+    "allProducts": "All Products ({total})",
+    "clearFilters": "Clear Filters",
     "show": "Show",
     "all": "All",
     "sort": {
-      "default": "Default sorting",
+      "default": "Default Sort",
       "priceAsc": "Price: Low to High",
       "priceDesc": "Price: High to Low",
-      "nameAsc": "Name: A to Z",
-      "nameDesc": "Name: Z to A"
+      "nameAsc": "Name: A-Z",
+      "nameDesc": "Name: Z-A"
     },
     "viewModes": {
-      "list": "List view",
-      "grid2": "Grid view 2x2",
-      "grid3": "Grid view 3x3"
+      "list": "List View",
+      "grid2": "Grid View 2x2",
+      "grid3": "Grid View 3x3"
     },
     "filters": "Filters",
-    "sortProducts": "Sort products"
+    "sortProducts": "Sort Products"
   },
   "grid": {
     "noProducts": "No products found."
   },
   "mobileFilters": {
     "title": "Filters",
-    "close": "Close filters"
+    "close": "Close Filters"
   },
   "categoryNavigation": {
     "all": "All",
     "shopAll": "Shop All",
     "newArrivals": "New Arrivals",
     "sale": "Sale",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
     "labels": {
       "all": "ALL",
       "new": "NEW",
       "sale": "SALE"
-    },
-    "scrollLeft": "Scroll categories left",
-    "scrollRight": "Scroll categories right"
+    }
   }
 }
+

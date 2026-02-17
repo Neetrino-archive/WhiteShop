@@ -163,16 +163,16 @@ export default async function ProductsPage({ searchParams }: any) {
   const colors = params?.colors;
   const sizes = params?.sizes;
   const brands = params?.brand;
-  const selectedColors = colors ? colors.split(',').map(c => c.trim().toLowerCase()) : [];
-  const selectedSizes = sizes ? sizes.split(',').map(s => s.trim()) : [];
-  const selectedBrands = brands ? brands.split(',').map(b => b.trim()) : [];
+  const selectedColors = colors ? colors.split(',').map((c: string) => c.trim().toLowerCase()) : [];
+  const selectedSizes = sizes ? sizes.split(',').map((s: string) => s.trim()) : [];
+  const selectedBrands = brands ? brands.split(',').map((b: string) => b.trim()) : [];
 
   // PAGINATION
   const buildPaginationUrl = (num: number) => {
     const q = new URLSearchParams();
     q.set("page", num.toString());
     Object.entries(params).forEach(([k, v]) => {
-      if (k !== "page" && v) q.set(k, v);
+      if (k !== "page" && v && typeof v === "string") q.set(k, v);
     });
     return `/products?${q.toString()}`;
   };

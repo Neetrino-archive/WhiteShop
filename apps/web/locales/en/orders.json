@@ -4,7 +4,7 @@
     "description": "The order you are looking for does not exist."
   },
   "title": "Order #{number}",
-  "placedOn": "Placed on {date}",
+  "placedOn": "Placed On {date}",
   "orderStatus": {
     "title": "Order Status",
     "payment": "Payment: {status}",
@@ -37,7 +37,4 @@
     "quantity": "Quantity: {qty} × {price} = {total}"
   }
 }
-
-
-
 

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { getStoredLanguage } from '../lib/language';
 import { useTranslation } from '../lib/i18n-client';
-import contactData from '../../../config/contact.json';
+import contactData from '../../../json/contact.json';
 
 export function Footer() {
   const { t } = useTranslation();

@@ -1,0 +1,19 @@
+{
+  "/admin/products/add/page": "app/admin/products/add/page.js",
+  "/api/v1/admin/attributes/route": "app/api/v1/admin/attributes/route.js",
+  "/api/v1/admin/brands/route": "app/api/v1/admin/brands/route.js",
+  "/api/v1/admin/categories/route": "app/api/v1/admin/categories/route.js",
+  "/api/v1/admin/settings/route": "app/api/v1/admin/settings/route.js",
+  "/api/v1/cart/route": "app/api/v1/cart/route.js",
+  "/api/v1/categories/tree/route": "app/api/v1/categories/tree/route.js",
+  "/api/v1/currency-rates/route": "app/api/v1/currency-rates/route.js",
+  "/api/v1/products/[slug]/reviews/route": "app/api/v1/products/[slug]/reviews/route.js",
+  "/api/v1/products/[slug]/route": "app/api/v1/products/[slug]/route.js",
+  "/api/v1/products/filters/route": "app/api/v1/products/filters/route.js",
+  "/api/v1/products/price-range/route": "app/api/v1/products/price-range/route.js",
+  "/api/v1/products/route": "app/api/v1/products/route.js",
+  "/categories/page": "app/categories/page.js",
+  "/page": "app/page.js",
+  "/products/[slug]/page": "app/products/[slug]/page.js",
+  "/products/page": "app/products/page.js"
+}

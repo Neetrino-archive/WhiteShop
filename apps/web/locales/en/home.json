@@ -1,29 +1,26 @@
 {
   "hero_title": "Welcome to Shop",
-  "hero_subtitle": "Discover amazing products and exclusive deals. Shop the latest trends and find everything you need in one place.",
+  "hero_subtitle": "Discover amazing products and exclusive offers. Shop the latest trends and find everything you need in one place.",
   "hero_button_products": "PRODUCTS",
   "hero_button_view_more": "VIEW MORE",
-  "features_title": "We Provide High Quality Goods",
-  "features_subtitle": "A client that's unhappy for a reason is a problem, a client that's unhappy though he or her can't",
+  "features_title": "We provide high quality products",
+  "features_subtitle": "An unsatisfied customer who has a reason is a problem, but an unsatisfied customer who cannot explain is a bigger problem.",
   "feature_fast_delivery_title": "Fast Delivery",
-  "feature_fast_delivery_description": "Chances are there wasn't collaboration and checkpoints, there wasn't a process.",
+  "feature_fast_delivery_description": "There likely was no collaboration and checkpoints, there was no process.",
   "feature_best_quality_title": "Best Quality",
-  "feature_best_quality_description": "It's content strategy gone awry right from the start. Forswearing the use of Lorem Ipsum.",
+  "feature_best_quality_description": "This is a content strategy that went wrong from the very beginning.",
   "feature_free_return_title": "Free Return",
-  "feature_free_return_description": "True enough, but that's not all that it takes to get things back on track out there for a text.",
+  "feature_free_return_description": "This is true, but that's not all that's needed to get things back on track.",
   "featured_products": {
     "title": "Featured Products",
-    "subtitle": "Three quick picks: New arrivals, Bestsellers, and Featured picks",
+    "subtitle": "Three quick choices: New Arrivals, Best Sellers and Featured Selections",
     "tab_new": "NEW",
     "tab_bestseller": "BESTSELLER",
     "tab_featured": "FEATURED",
     "ariaShowProducts": "Show {label} products",
     "errorLoading": "Failed to load products",
     "tryAgain": "Try Again",
-    "noProducts": "No products available in this category."
+    "noProducts": "No products in this category."
   }
 }
-
-
-
 

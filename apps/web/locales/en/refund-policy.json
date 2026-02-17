@@ -1,17 +1,17 @@
 {
   "title": "Refund Policy",
-  "lastUpdated": "Last updated:",
+  "lastUpdated": "Last Updated:",
   "overview": {
     "title": "Overview",
     "description": "We want you to be satisfied with every purchase. This policy explains how returns and refunds work, including timelines and eligibility requirements."
   },
   "eligibility": {
-    "title": "Eligibility for Refunds",
-    "description": "To qualify for a refund, please ensure that:",
+    "title": "Refund Eligibility",
+    "description": "To be eligible for a refund, please ensure that:",
     "items": {
-      "condition": "The item is unused, in original condition, and in original packaging.",
-      "timeline": "A return request is submitted within 14 days of delivery unless stated otherwise.",
-      "proof": "Proof of purchase (order number or receipt) is provided.",
+      "condition": "The item is unused, in original condition and in original packaging.",
+      "timeline": "The return request is submitted within 14 days of delivery, unless otherwise stated.",
+      "proof": "Proof of purchase is provided (order number or receipt).",
       "excluded": "Items marked as final sale or non-returnable are excluded."
     }
   },
@@ -20,35 +20,30 @@
     "steps": {
       "contact": "Contact our support team with your order number and reason for return.",
       "authorization": "Receive return authorization and instructions.",
-      "ship": "Ship the item using a trackable method; include all original accessories and tags."
+      "ship": "Ship the item via trackable method; include all original accessories and tags."
     },
-    "description": "Once we receive and inspect the item, we will confirm approval or rejection of the refund."
+    "description": "After receiving and inspecting the item, we will confirm refund approval or denial."
   },
   "refundMethod": {
-    "title": "Refund Method & Timing",
+    "title": "Refund Method and Timing",
     "items": {
       "method": "Approved refunds are issued to the original payment method.",
-      "timing": "Processing time is typically 5–10 business days after approval; bank timings may vary.",
-      "shipping": "Shipping fees are non-refundable unless the return is due to our error or a defective item."
+      "timing": "Processing time is typically 5–10 business days after approval; bank times may vary.",
+      "shipping": "Shipping fees are not refunded unless the return is due to our error or a defective item."
     }
   },
   "nonRefundable": {
     "title": "Non-Refundable Items",
     "items": {
-      "giftCards": "Gift cards and digital products once delivered.",
-      "personalized": "Personalized or custom-made items unless defective.",
+      "giftCards": "Gift cards and digital items after delivery.",
+      "personalized": "Personalized or custom-made items, unless defective.",
       "unauthorized": "Items returned without prior authorization.",
-      "condition": "Products not in original condition, damaged, or missing parts for reasons not due to our error."
+      "condition": "Items not in original condition, damaged or with missing parts for reasons not due to our error."
     }
   },
   "contact": {
     "title": "Contact Us",
-    "description": "For questions about this Refund Policy or to start a return, email us at"
+    "description": "For questions about this Refund Policy or to initiate a return, write to us at"
   }
 }
-
-
-
-
-
 

@@ -3,11 +3,17 @@
  */
 
 import imageCompression from 'browser-image-compression';
+import { logger } from './logger';
+
+/**
+ * Type for image URL input - can be string or object with url/src/value properties
+ */
+type ImageUrlInput = string | null | undefined | { url?: string; src?: string; value?: string };
 
 /**
  * Validates if a URL is a valid image URL
  */
-export function isValidImageUrl(url: any): boolean {
+export function isValidImageUrl(url: ImageUrlInput): boolean {
   if (!url) return false;
   
   const urlStr = typeof url === 'string' ? url.trim() : '';
@@ -29,7 +35,7 @@ export function isValidImageUrl(url: any): boolean {
  * Processes and normalizes an image URL from various formats
  * Returns null if invalid
  */
-export function processImageUrl(url: any): string | null {
+export function processImageUrl(url: ImageUrlInput): string | null {
   if (!url) return null;
   
   let finalUrl = '';
@@ -203,7 +209,7 @@ export function getUrlVariations(url: string): string[] {
  * Cleans and validates an array of image URLs
  * Removes invalid, empty, and duplicate URLs
  */
-export function cleanImageUrls(urls: (string | any)[]): string[] {
+export function cleanImageUrls(urls: (string | ImageUrlInput)[]): string[] {
   if (!Array.isArray(urls)) return [];
   
   const seen = new Set<string>();
@@ -228,8 +234,8 @@ export function cleanImageUrls(urls: (string | any)[]): string[] {
  * Removes variant images from main images array to prevent duplication
  */
 export function separateMainAndVariantImages(
-  mainImages: (string | any)[],
-  variantImages: (string | any)[]
+  mainImages: (string | ImageUrlInput)[],
+  variantImages: (string | ImageUrlInput)[]
 ): {
   main: string[];
   variants: string[];
@@ -326,7 +332,7 @@ export async function processImageFile(
   }
 ): Promise<string> {
   try {
-    console.log('🖼️ [IMAGE PROCESSING] Starting image processing:', {
+    logger.debug('Starting image processing', {
       fileName: file.name,
       originalSize: `${Math.round(file.size / 1024)}KB`,
       type: file.type
@@ -351,7 +357,7 @@ export async function processImageFile(
       // EXIF orientation is automatically handled by browser-image-compression
     });
 
-    console.log('✅ [IMAGE PROCESSING] Image processed successfully:', {
+    logger.info('Image processed successfully', {
       originalSize: `${Math.round(file.size / 1024)}KB`,
       compressedSize: `${Math.round(compressedFile.size / 1024)}KB`,
       reduction: `${Math.round((1 - compressedFile.size / file.size) * 100)}%`
@@ -362,18 +368,19 @@ export async function processImageFile(
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        console.log('✅ [IMAGE PROCESSING] Image converted to base64, length:', result.length);
+        logger.debug('Image converted to base64', { length: result.length });
         resolve(result);
       };
       reader.onerror = (error) => {
-        console.error('❌ [IMAGE PROCESSING] Error converting to base64:', error);
+        logger.error('Error converting to base64', { error });
         reject(new Error('Failed to convert image to base64'));
       };
       reader.readAsDataURL(compressedFile);
     });
-  } catch (error: any) {
-    console.error('❌ [IMAGE PROCESSING] Error processing image:', error);
-    throw new Error(error?.message || 'Failed to process image');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to process image';
+    logger.error('Error processing image', { error });
+    throw new Error(errorMessage);
   }
 }
 

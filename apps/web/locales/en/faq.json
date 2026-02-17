@@ -1,25 +1,25 @@
 {
   "title": "Frequently Asked Questions",
-  "description": "Find answers to common questions about our products, shipping, returns, and more.",
+  "description": "Find answers to common questions about our products, shipping, returns and more.",
   "categories": {
     "ordersShipping": {
       "title": "Orders & Shipping",
       "questions": {
         "shippingTime": {
           "q": "How long does shipping take?",
-          "a": "Shipping times vary depending on your location and the shipping method selected. Standard shipping typically takes 5-7 business days, while express shipping takes 2-3 business days. You can find detailed shipping information on our Delivery page."
+          "a": "Shipping times vary depending on your location and selected shipping method. Standard shipping typically takes 5-7 business days, while express shipping takes 2-3 business days. You can find detailed shipping information on our Delivery page."
         },
         "internationalShipping": {
           "q": "Do you ship internationally?",
-          "a": "Yes, we ship to most countries worldwide. Shipping costs and delivery times vary by location. Please check our shipping page for more details."
+          "a": "Yes, we ship to most countries worldwide. Shipping costs and times vary depending on location. Please check our delivery page for more detailed information."
         },
         "trackOrder": {
           "q": "Can I track my order?",
-          "a": "Yes, once your order ships, you will receive a tracking number via email. You can use this number to track your package on the carrier's website."
+          "a": "Yes, once your order is shipped, you will receive a tracking number via email. You can use this number to track your package on the carrier's website."
         },
         "damagedOrder": {
-          "q": "What if my order is damaged or incorrect?",
-          "a": "If you receive a damaged or incorrect item, please contact our customer service team immediately. We will arrange for a replacement or refund at no additional cost to you."
+          "q": "What should I do if my order is damaged or incorrect?",
+          "a": "If you receive a damaged or incorrect item, please contact our customer service team immediately. We will arrange a replacement or return at no additional cost to you."
         }
       }
     },
@@ -28,19 +28,19 @@
       "questions": {
         "returnPolicy": {
           "q": "What is your return policy?",
-          "a": "We offer a 30-day return policy. Items must be in their original condition with tags attached. Please visit our Returns page for complete details."
+          "a": "We offer a 30-day return policy. Items must be in their original condition with tags attached. Please visit our Returns page for full details."
         },
         "howToReturn": {
           "q": "How do I return an item?",
-          "a": "To return an item, contact our customer service team to receive a return authorization number. Then package the item securely and ship it to our return address. Full instructions are available on our Returns page."
+          "a": "To return an item, contact our customer service team to get a return authorization number. Then package the item securely and ship it to our return address. Full instructions are available on our Returns page."
         },
         "refundTime": {
-          "q": "How long does it take to process a refund?",
-          "a": "Once we receive your returned item, we process refunds within 5-7 business days. The refund will appear in your account shortly after processing."
+          "q": "How long does refund processing take?",
+          "a": "After we receive your returned item, we process refunds within 5-7 business days. The refund will appear on your account shortly after processing."
         },
         "returnShipping": {
           "q": "Do I have to pay for return shipping?",
-          "a": "Return shipping costs depend on the reason for return. If the item is defective or incorrect, we cover the return shipping. Otherwise, the customer is responsible for return shipping costs."
+          "a": "Return shipping costs depend on the reason for return. If the item is defective or incorrect, we cover the return shipping cost. Otherwise, the customer is responsible for return shipping costs."
         }
       }
     },
@@ -49,7 +49,7 @@
       "questions": {
         "paymentMethods": {
           "q": "What payment methods do you accept?",
-          "a": "We accept all major credit cards, debit cards, PayPal, and other secure payment methods. All payments are processed securely."
+          "a": "We accept all major credit cards, debit cards, PayPal and other secure payment methods. All payments are processed securely."
         },
         "paymentSecurity": {
           "q": "Is my payment information secure?",
@@ -66,15 +66,15 @@
       "questions": {
         "createAccount": {
           "q": "How do I create an account?",
-          "a": "You can create an account by clicking the \"Register\" link in the header or by registering during checkout. Having an account allows you to track orders and save your information for faster checkout."
+          "a": "You can create an account by clicking the 'Register' link in the header or by registering during checkout. Having an account allows you to track orders and save your information for faster checkout."
         },
         "resetPassword": {
           "q": "How do I reset my password?",
-          "a": "If you've forgotten your password, click \"Forgot Password\" on the login page. You will receive an email with instructions to reset your password."
+          "a": "If you've forgotten your password, click the 'Forgot Password' button on the login page. You will receive an email with instructions to reset your password."
         },
         "privacyProtection": {
           "q": "How do you protect my personal information?",
-          "a": "We take your privacy seriously. We use secure encryption and never share your personal information with third parties. Please review our Privacy Policy for complete details."
+          "a": "We take your privacy seriously. We use secure encryption and never share your personal information with third parties. Please review our Privacy Policy for full details."
         }
       }
     },
@@ -83,11 +83,11 @@
       "questions": {
         "authenticProducts": {
           "q": "Are your products authentic?",
-          "a": "Yes, we only sell authentic products from authorized dealers and manufacturers. We guarantee the authenticity of all items."
+          "a": "Yes, we only sell authentic products from licensed dealers and manufacturers. We guarantee the authenticity of all products."
         },
         "outOfStock": {
-          "q": "What if a product is out of stock?",
-          "a": "If a product is out of stock, you can sign up for email notifications to be alerted when it becomes available again."
+          "q": "What should I do if an item is out of stock?",
+          "a": "If an item is out of stock, you can sign up for email notifications to be notified when it becomes available again."
         },
         "warranties": {
           "q": "Do you offer product warranties?",
@@ -98,14 +98,9 @@
   },
   "stillHaveQuestions": {
     "title": "Still have questions?",
-    "description": "Can't find what you're looking for? Our customer service team is here to help.",
+    "description": "Can't find what you're looking for? Our customer service team is ready to help:",
     "contactUs": "Contact Us →",
     "getSupport": "Get Support →"
   }
 }
-
-
-
-
-
 
