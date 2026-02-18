@@ -380,6 +380,45 @@ pnpm create next-app@latest project-name --typescript --tailwind --eslint --app 
 pnpm dlx create-turbo@latest
 ```
 
+### Step 3.1.1. Quality Automation Setup
+
+> See `reference/workflows/ci-quality.yml.example` and `docs/QUALITY_AUTOMATION_PLAN.md`.
+
+```bash
+# 1. Install quality dev-dependencies
+pnpm add -D prettier vitest husky lint-staged @commitlint/cli @commitlint/config-conventional
+
+# 2. Init Husky
+pnpm husky init
+
+# 3. Pre-commit hook (format + lint staged files)
+echo "pnpm lint-staged" > .husky/pre-commit
+
+# 4. Commit-msg hook (Conventional Commits enforcement)
+echo 'pnpm commitlint --edit $1' > .husky/commit-msg
+
+# 5. Copy CI workflow
+cp reference/workflows/ci-quality.yml.example .github/workflows/ci.yml
+# Also uncomment npm section in .github/dependabot.yml
+```
+
+Add lint-staged config to package.json:
+
+```json
+{
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,css}": ["prettier --write"],
+    "*.{ts,tsx,js,jsx}": ["eslint --fix"]
+  }
+}
+```
+
+Add scripts from 17-cicd.mdc (Base scripts section).
+
+If Prisma is used:
+- Change `typecheck` to `prisma generate && tsc --noEmit`
+- Add db:* scripts from 17-cicd.mdc
+
 ### Քայլ 3.2. Ստեղծվող ֆայլեր
 
 Ինիցիալիզացիայից հետո ստեղծվում են.

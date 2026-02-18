@@ -112,11 +112,13 @@ AI-ն կխնդրի հաշիվներ ստեղծել և տվյալներ տալ ա
 │   ├── templates/              # Կաղապարներ (ARCHITECTURE, ADR, PROGRESS)
 │   └── user-rules/             # Cursor-ի գլոբալ կանոններ
 │
-├── .github/                    # PR և Issue կաղապարներ
-├── README.md                   # Այս ֆայլը
+├── .github/                    # PR/Issue templates, Dependabot
+├── README.md
 ├── LICENSE
-└── .editorconfig
-```
+├── .editorconfig
+├── prettier.config.cjs         # Prettier config (ready to use)
+├── .prettierignore             # Prettier ignore (ready to use)
+└── .commitlintrc.json          # Commitlint config (ready to use)```
 
 ---
 
@@ -179,5 +181,24 @@ git checkout template/main -- .cursor/rules/<պետք-եղած-ֆայլ>.mdc
 ---
 
 ## Լիցենզիա
+
+## Quality Automation (after creating project from template)
+
+The template includes config files (`prettier.config.cjs`, `.prettierignore`, `.commitlintrc.json`) and CI templates. After creating a project:
+
+### AI does (Step 3.1.1 in onboarding):
+- Installs dev dependencies (prettier, vitest, husky, lint-staged, commitlint)
+- Sets up husky hooks (pre-commit + commit-msg)
+- Copies CI workflow from `reference/workflows/ci-quality.yml.example`
+- Adds scripts to package.json
+
+### Developer does manually:
+1. **Branch Protection** — Settings > Branches > Add rule > `main` > Require "Quality checks" to pass
+2. **Secret Protection** — Settings > Code security > Secret Protection > Enable
+3. **Dependabot npm** — Uncomment npm section in `.github/dependabot.yml`
+
+> Details: `docs/QUALITY_AUTOMATION_PLAN.md`
+
+---
 
 [MIT](LICENSE) — կարող ես ազատ օգտագործել և հարմարեցնել։

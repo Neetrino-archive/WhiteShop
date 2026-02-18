@@ -10,6 +10,12 @@ Thumbs.db
 # Dependencies (if scripts use Node/npm)
 node_modules/
 
+# Build output
+.next/
+dist/
+build/
+coverage/
+
 # Logs and temp
 *.log
 npm-debug.log*

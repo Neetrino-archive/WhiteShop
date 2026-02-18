@@ -65,7 +65,7 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '8'
+  PNPM_VERSION: '9'
 
 jobs:
   # ==========================================
@@ -508,37 +508,81 @@ volumes:
 
 ## 📜 SCRIPTS (package.json)
 
+### Base scripts — Next.js
+
+> CI quality pipeline template: `reference/workflows/ci-quality.yml.example`
+
 ```json
 {
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "type-check": "tsc --noEmit",
-    
-    "test": "jest",
-    "test:unit": "jest --testPathPattern=unit",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "playwright test",
-    "test:coverage": "jest --coverage",
-    
+
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+
+    "lint": "next lint --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage",
+
+    "ci:check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+
+    "prepare": "husky"
+  }
+}
+```
+
+### Prisma scripts (add when using Prisma)
+
+```json
+{
+  "scripts": {
+    "typecheck": "prisma generate && tsc --noEmit",
+
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio",
-    
+    "db:studio": "prisma studio"
+  }
+}
+```
+
+### E2E scripts (add when stable user flows exist)
+
+```json
+{
+  "scripts": {
+    "test:e2e": "playwright test"
+  }
+}
+```
+
+### Docker scripts (only for self-hosted)
+
+```json
+{
+  "scripts": {
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    
-    "prepare": "husky install"
+    "docker:logs": "docker-compose logs -f"
+  }
+}
+```
+
+### NestJS scripts (Size B/C — separate backend)
+
+```json
+{
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "test": "jest --passWithNoTests",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "build": "nest build"
   }
 }
 ```

@@ -7,9 +7,14 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
 
-  # Uncomment when/if this repo gets a package.json
+  # ────────────────────────────────────────────────
+  # npm — раскомментировать при создании проекта
+  # (когда появится package.json)
+  # ────────────────────────────────────────────────
   # - package-ecosystem: "npm"
   #   directory: "/"
   #   schedule:
   #     interval: "weekly"
   #   open-pull-requests-limit: 5
+  #   labels:
+  #     - "dependencies"
